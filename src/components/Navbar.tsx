@@ -28,7 +28,8 @@ import {
   Settings,
   Receipt,
   Moon,
-  Sun
+  Sun,
+  Landmark
 } from 'lucide-react';
 import { Language, SystemDiagnostics, SystemSettings } from '../types';
 
@@ -73,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isChangePinModalOpen, setIsChangePinModalOpen] = useState(false);
   const [newPinInput, setNewPinInput] = useState('');
 
-  const restrictedTabs = ['customers', 'accounting', 'ai', 'reports'];
+  const restrictedTabs = ['customers', 'accounting', 'ai', 'reports', 'tax_return'];
 
   const navItems = [
     { id: 'pos', labelAr: 'نقطة البيع (POS)', labelEn: 'POS Terminal', icon: ShoppingCart },
@@ -82,6 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'customers', labelAr: 'العملاء والموردون', labelEn: 'Contacts & Debt', icon: Users },
     { id: 'accounting', labelAr: 'المحاسبة والمصروفات', labelEn: 'Accounting & Expenses', icon: DollarSign },
     { id: 'reports', labelAr: 'التقارير المالية', labelEn: 'Reports & Analytics', icon: BarChart3 },
+    { id: 'tax_return', labelAr: 'الإقرار الضريبي التلقائي', labelEn: 'Auto Tax Return', icon: Landmark },
     { id: 'ai', labelAr: 'المستشار الذكي (Gemini)', labelEn: 'AI Advisor', icon: Sparkles },
     { id: 'settings', labelAr: 'إعدادات المتجر والعملات', labelEn: 'Store & Currencies', icon: Settings },
     { id: 'guide', labelAr: 'دليل بناء Desktop EXE', labelEn: 'Desktop EXE Guide', icon: Terminal },
@@ -140,7 +142,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <div>
               <h1 className="text-lg font-bold text-slate-800 tracking-tight">
-                {isAr ? 'نظام المبيعات والمحاسبة الذكي' : 'Smart POS & Accounting'}
+                {isAr ? (settings?.storeNameAr || 'نظام المبيعات والمحاسبة الذكي') : (settings?.storeNameEn || 'Smart POS & Accounting')}
               </h1>
               <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
@@ -308,6 +310,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {item.id === 'guide' && (
                   <span className="ml-1 px-1.5 py-0.2 text-[9px] font-extrabold bg-emerald-100 text-emerald-700 rounded-full border border-emerald-300">
                     EXE
+                  </span>
+                )}
+                {item.id === 'tax_return' && !isLockedForCashier && (
+                  <span className="ml-1 px-1.5 py-0.2 text-[9px] font-extrabold bg-indigo-100 text-indigo-700 rounded-full border border-indigo-300">
+                    TAX
                   </span>
                 )}
               </button>

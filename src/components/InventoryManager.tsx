@@ -3,10 +3,86 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
-import { Package, Plus, Search, AlertTriangle, Edit, Trash2, Check, RefreshCw, Filter, ArrowUpDown, Layers } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Package, Plus, Search, AlertTriangle, Edit, Trash2, Check, RefreshCw, Filter, ArrowUpDown, Layers, Camera, Upload, Image as ImageIcon, X, Download } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Product, SystemSettings, Language } from '../types';
 import { CategoryIconModal } from './CategoryIconModal';
+import JsBarcode from 'jsbarcode';
+
+interface JsBarcodeRendererProps {
+  value: string;
+  height?: number;
+  width?: number;
+  displayValue?: boolean;
+  fontSize?: number;
+  format?: string;
+  className?: string;
+}
+
+const JsBarcodeRenderer: React.FC<JsBarcodeRendererProps> = ({
+  value,
+  height = 40,
+  width = 1.5,
+  displayValue = false,
+  fontSize = 12,
+  format = 'CODE128',
+  className = ''
+}) => {
+  const svgRef = React.useRef<SVGSVGElement | null>(null);
+
+  React.useEffect(() => {
+    if (!svgRef.current) return;
+    const cleanVal = (value || '00000000').toString().trim();
+    if (!cleanVal) return;
+
+    try {
+      JsBarcode(svgRef.current, cleanVal, {
+        format: (format || 'CODE128') as any,
+        width: width,
+        height: height,
+        displayValue: displayValue,
+        fontSize: fontSize,
+        margin: 0,
+        background: 'transparent',
+        lineColor: '#000000'
+      });
+    } catch (err) {
+      try {
+        const fallbackVal = cleanVal.replace(/[^a-zA-Z0-9.\-$+/]/g, '') || '12345678';
+        JsBarcode(svgRef.current, fallbackVal, {
+          format: 'CODE128',
+          width: width,
+          height: height,
+          displayValue: displayValue,
+          fontSize: fontSize,
+          margin: 0,
+          background: 'transparent',
+          lineColor: '#000000'
+        });
+      } catch (e) {
+        console.error('JsBarcode render failed:', e);
+      }
+    }
+  }, [value, height, width, displayValue, fontSize, format]);
+
+  return <svg ref={svgRef} className={`max-w-full h-auto ${className}`} />;
+};
+
+const PLACEHOLDER_IMAGES = [
+  { labelAr: 'مشروبات وقهوة ☕', labelEn: 'Beverages & Coffee ☕', url: 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'عصائر طازجة 🧃', labelEn: 'Fresh Juice 🧃', url: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'حلويات وسناكس 🍫', labelEn: 'Snacks & Sweets 🍫', url: 'https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'معجنات ومخبوزات 🥐', labelEn: 'Bakery & Pastry 🥐', url: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'فواكه وخضروات 🍎', labelEn: 'Fruits & Veggies 🍎', url: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'وجبات سريعة 🍔', labelEn: 'Fast Food & Burgers 🍔', url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'مواد غذائية وبقالة 🛒', labelEn: 'Grocery Staples 🛒', url: 'https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'مواد تنظيف وعناية 🧼', labelEn: 'Cleaning Supplies 🧼', url: 'https://images.unsplash.com/photo-1585816830744-f859a7210dfa?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'إلكترونيات وصيانة 📱', labelEn: 'Electronics & Tech 📱', url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'عطور ومستحضرات 🌸', labelEn: 'Cosmetics & Beauty 🌸', url: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=300&q=80' },
+  { labelAr: 'صندوق منتج (أوفلاين) 📦', labelEn: 'Box Preset (Offline) 📦', url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package" style="background:%236366f1;color:white;padding:20px;"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>' },
+  { labelAr: 'حقيبة تسوق (أوفلاين) 🛍️', labelEn: 'Shopping Bag (Offline) 🛍️', url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-bag" style="background:%2310b981;color:white;padding:20px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>' }
+];
 
 interface InventoryManagerProps {
   products: Product[];
@@ -32,6 +108,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [filterLowStock, setFilterLowStock] = useState<boolean>(false);
+  const [customLowStockThreshold, setCustomLowStockThreshold] = useState<number>(10);
   
   // Modal state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -41,10 +118,14 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
 
   // Barcode Studio Modal state (Accessible to both Admin and Cashier as requested)
   const [isBarcodeStudioOpen, setIsBarcodeStudioOpen] = useState(false);
-  const [barcodeMode, setBarcodeMode] = useState<'existing' | 'new'>('existing');
+  const [barcodeMode, setBarcodeMode] = useState<'existing' | 'new' | 'sku'>('existing');
   const [selectedBarcodeProduct, setSelectedBarcodeProduct] = useState<Product | null>(null);
   const [barcodeLabelCount, setBarcodeLabelCount] = useState<number>(12);
+  const [labelStyle, setLabelStyle] = useState<'sticker' | 'shelf'>('sticker');
+  const [barcodeFormat, setBarcodeFormat] = useState<string>('CODE128');
   const [customBarcodeVal, setCustomBarcodeVal] = useState<string>('');
+  const [skuInputVal, setSkuInputVal] = useState<string>('');
+  const [skuBarcodeRule, setSkuBarcodeRule] = useState<'exact_sku' | 'numeric_ean'>('numeric_ean');
 
   // New Product quick creation from Barcode Studio
   const [newBarcodeNameAr, setNewBarcodeNameAr] = useState('');
@@ -57,40 +138,96 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
-  const renderBarcodeBars = (code: string) => {
-    const bars: { width: number; isBlack: boolean }[] = [];
-    let seed = 0;
-    for (let i = 0; i < code.length; i++) {
-      seed += code.charCodeAt(i) * (i + 1);
+  // Camera & Image state
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    if (isCameraActive && isModalOpen) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then((s) => {
+          stream = s;
+          if (videoRef.current) {
+            videoRef.current.srcObject = s;
+            videoRef.current.play();
+          }
+        })
+        .catch((err) => {
+          console.error('Camera access error:', err);
+          setCameraError(isAr ? 'تعذر الوصول إلى الكاميرا. تأكد من وجود كاميرا ومنح الصلاحيات في المتصفح.' : 'Unable to access camera. Please check browser permissions.');
+        });
     }
-    bars.push({ width: 2, isBlack: true });
-    bars.push({ width: 1, isBlack: false });
-    bars.push({ width: 2, isBlack: true });
-    bars.push({ width: 2, isBlack: false });
-    for (let i = 0; i < 24; i++) {
-      const val = (seed + i * 17) % 4 + 1;
-      bars.push({ width: val, isBlack: i % 2 === 0 });
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [isCameraActive, isModalOpen, isAr]);
+
+  useEffect(() => {
+    if (!isModalOpen && isCameraActive) {
+      stopCamera();
     }
-    bars.push({ width: 1, isBlack: false });
-    bars.push({ width: 2, isBlack: true });
-    bars.push({ width: 1, isBlack: false });
-    bars.push({ width: 2, isBlack: true });
-    bars.push({ width: 1, isBlack: false });
-    for (let i = 0; i < 24; i++) {
-      const val = (seed + i * 23) % 4 + 1;
-      bars.push({ width: val, isBlack: i % 2 !== 0 });
+  }, [isModalOpen]);
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
-    bars.push({ width: 2, isBlack: false });
-    bars.push({ width: 2, isBlack: true });
-    bars.push({ width: 1, isBlack: false });
-    bars.push({ width: 2, isBlack: true });
-    return bars.map((b, idx) => (
-      <div
-        key={idx}
-        style={{ width: `${b.width * 2}px` }}
-        className={`h-full ${b.isBlack ? 'bg-black' : 'bg-transparent'}`}
-      />
-    ));
+    setIsCameraActive(false);
+    setCameraError(null);
+  };
+
+  const handleCapturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 300;
+      canvas.height = videoRef.current.videoHeight || 300;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        if (editingProduct) {
+          setEditingProduct({ ...editingProduct, imageUrl: dataUrl });
+        }
+      }
+    }
+    stopCamera();
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (reader.result && typeof reader.result === 'string' && editingProduct) {
+          setEditingProduct({ ...editingProduct, imageUrl: reader.result });
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getSkuGeneratedBarcode = (skuStr: string, rule: 'exact_sku' | 'numeric_ean'): string => {
+    if (!skuStr) return '2000000000';
+    if (rule === 'exact_sku') {
+      return skuStr;
+    }
+    let digits = skuStr.replace(/\D/g, '');
+    if (!digits) {
+      let hash = 0;
+      for (let i = 0; i < skuStr.length; i++) hash = (hash * 31 + skuStr.charCodeAt(i)) % 999999;
+      digits = Math.abs(hash).toString();
+    }
+    return `200${digits.padStart(7, '0').slice(0, 9)}`;
+  };
+
+  const renderBarcodeBars = (code: string, customHeight: number = 40, customWidth: number = 1.5) => {
+    return <JsBarcodeRenderer value={code} height={customHeight} width={customWidth} format={barcodeFormat} />;
   };
 
   const categories = useMemo(() => {
@@ -127,19 +264,91 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
       const matchSearch = searchTerm === '' || 
         p.nameAr.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.nameEn.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.barcode.includes(searchTerm);
-      const matchStock = !filterLowStock || p.stock <= p.minStock;
+        p.barcode.includes(searchTerm) ||
+        (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
+      const isLow = p.stock <= customLowStockThreshold || p.stock <= p.minStock;
+      const matchStock = !filterLowStock || isLow;
       return matchCat && matchSearch && matchStock;
     });
-  }, [products, selectedCategory, searchTerm, filterLowStock]);
+  }, [products, selectedCategory, searchTerm, filterLowStock, customLowStockThreshold]);
+
+  // Export Current Product List as CSV for external reporting
+  const handleExportCSV = () => {
+    if (filteredProducts.length === 0) {
+      alert(isAr ? 'لا توجد منتجات حالياً للتصدير.' : 'No products available to export.');
+      return;
+    }
+
+    const headers = [
+      isAr ? 'رمز الصنف (SKU)' : 'SKU',
+      isAr ? 'الباركود' : 'Barcode',
+      isAr ? 'الاسم بالعربي' : 'Name (Ar)',
+      isAr ? 'الاسم بالإنجليزي' : 'Name (En)',
+      isAr ? 'التصنيف' : 'Category',
+      isAr ? 'الوحدة' : 'Unit',
+      isAr ? 'المخزون الحالي' : 'Stock',
+      isAr ? 'حد التنبيه' : 'Min Stock Alert',
+      isAr ? `سعر التكلفة (${settings.currency})` : `Cost Price (${settings.currency})`,
+      isAr ? `سعر البيع (${settings.currency})` : `Selling Price (${settings.currency})`,
+      isAr ? 'هامش الربح (%)' : 'Profit Margin (%)',
+      isAr ? `إجمالي القيمة بالتكلفة (${settings.currency})` : `Total Value at Cost (${settings.currency})`,
+      isAr ? `إجمالي القيمة بالبيع (${settings.currency})` : `Total Value at Selling (${settings.currency})`,
+      isAr ? 'سياسة الاسترجاع' : 'Return Policy',
+      isAr ? 'تاريخ آخر تحديث' : 'Last Updated'
+    ];
+
+    const formatCell = (val: any) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+    const rows = filteredProducts.map(p => {
+      const unitLabel = p.unit === 'piece' ? (isAr ? 'قطعة' : 'Piece') :
+                        p.unit === 'kg' ? (isAr ? 'كيلو' : 'Kg') :
+                        p.unit === 'box' ? (isAr ? 'صندوق' : 'Box') : (isAr ? 'متر' : 'Meter');
+      const totalCost = (p.costPrice || 0) * (p.stock || 0);
+      const totalSelling = (p.sellingPrice || 0) * (p.stock || 0);
+      const margin = p.sellingPrice > 0 ? (((p.sellingPrice - (p.costPrice || 0)) / p.sellingPrice) * 100).toFixed(1) + '%' : '0%';
+      const updatedDate = p.updatedAt ? new Date(p.updatedAt).toLocaleDateString(isAr ? 'ar-SA' : 'en-US') : '';
+
+      return [
+        formatCell(p.sku || ''),
+        formatCell(p.barcode || ''),
+        formatCell(p.nameAr || ''),
+        formatCell(p.nameEn || ''),
+        formatCell(p.category || ''),
+        formatCell(unitLabel),
+        formatCell(p.stock || 0),
+        formatCell(p.minStock || 0),
+        formatCell(p.costPrice || 0),
+        formatCell(p.sellingPrice || 0),
+        formatCell(margin),
+        formatCell(totalCost.toFixed(2)),
+        formatCell(totalSelling.toFixed(2)),
+        formatCell(p.returnPolicy || ''),
+        formatCell(updatedDate)
+      ].join(',');
+    });
+
+    const csvContent = [headers.map(formatCell).join(','), ...rows].join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    const dateStr = new Date().toISOString().split('T')[0];
+    const fileName = isAr ? `تقرير_المخزون_${dateStr}.csv` : `Inventory_Report_${dateStr}.csv`;
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleOpenNewModal = () => {
     if (userRole !== 'admin') {
       alert(isAr ? 'عفواً! إضافة المنتجات مخصصة للمدير فقط.' : 'Access Denied! Adding products is restricted to Admins.');
       return;
     }
+    const autoSku = `SKU-${Math.floor(1000 + Math.random() * 9000)}`;
     setEditingProduct({
       id: '',
+      sku: autoSku,
       nameAr: '',
       nameEn: '',
       barcode: `6281001${Math.floor(10000 + Math.random() * 90000)}`,
@@ -212,17 +421,60 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* User-Defined Low Stock Threshold Selector */}
+          <div className="flex items-center gap-1.5 bg-white/80 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-slate-200 shadow-xs">
+            <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+              <span>{isAr ? 'حد تنبيه النواقص:' : 'Alert Threshold:'}</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min="0"
+                max="10000"
+                value={customLowStockThreshold}
+                onChange={(e) => setCustomLowStockThreshold(Math.max(0, parseInt(e.target.value) || 0))}
+                className="w-14 px-2 py-1 bg-white border border-slate-300 rounded-xl text-center font-black text-xs text-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                title={isAr ? 'حدد الكمية التي يعتبر الصنف دونها منخفض المخزون' : 'Set stock quantity threshold for low stock alert'}
+              />
+              <span className="text-[11px] font-bold text-slate-500">{isAr ? 'قطعة' : 'qty'}</span>
+            </div>
+            {/* Quick preset buttons */}
+            <div className="flex items-center gap-1 ml-1 rtl:mr-1 rtl:ml-0 border-l rtl:border-l-0 rtl:border-r border-slate-200 pl-1 rtl:pr-1 rtl:pl-0">
+              {[5, 10, 20].map((val) => (
+                <button
+                  key={val}
+                  type="button"
+                  onClick={() => setCustomLowStockThreshold(val)}
+                  className={`px-1.5 py-0.5 rounded-lg text-[10px] font-black transition cursor-pointer ${
+                    customLowStockThreshold === val
+                      ? 'bg-amber-500 text-white shadow-2xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title={isAr ? `تعيين الحد على ≤ ${val}` : `Set threshold to ≤ ${val}`}
+                >
+                  ≤{val}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Low Stock Filter Toggle */}
           <button
             onClick={() => setFilterLowStock(!filterLowStock)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition cursor-pointer ${
               filterLowStock 
-                ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-md' 
+                ? 'bg-amber-500 text-white border border-amber-600 shadow-md' 
                 : 'bg-white/60 hover:bg-white/80 text-slate-700 border border-white/80 shadow-[2px_2px_5px_#d1d9e6,-2px_-2px_5px_#ffffff]'
             }`}
           >
-            <AlertTriangle className="w-4 h-4" />
+            <AlertTriangle className={`w-4 h-4 ${filterLowStock ? 'text-white animate-bounce' : 'text-amber-600'}`} />
             <span>{isAr ? 'نواقص المخزون فقط' : 'Low Stock Only'}</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+              filterLowStock ? 'bg-white text-amber-600' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {products.filter(p => p.stock <= customLowStockThreshold || p.stock <= p.minStock).length}
+            </span>
           </button>
 
           {/* Barcode Studio Button - Accessible to BOTH Admin and Cashier as requested */}
@@ -237,6 +489,19 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
           >
             <Package className="w-4 h-4 text-yellow-300 animate-pulse" />
             <span>{isAr ? '🏷️ عمل الباركود للأصناف (جديد / قديم)' : '🏷️ Barcode Studio (New / Old)'}</span>
+          </button>
+
+          {/* Export CSV Report Button */}
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-200 border border-emerald-500 transition transform active:scale-95 cursor-pointer"
+            title={isAr ? 'تصدير قائمة المنتجات المعروضة كملف CSV للتقارير الخارجية (متوافق مع Excel)' : 'Export current product list as a CSV file for external reporting (Excel compatible)'}
+          >
+            <Download className="w-4 h-4 text-emerald-200" />
+            <span>{isAr ? '📊 تصدير CSV (Excel)' : '📊 Export CSV'}</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-700/80 text-emerald-100">
+              {filteredProducts.length}
+            </span>
           </button>
 
           {/* Add New Product - Admin Only */}
@@ -321,24 +586,65 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map(prod => {
+                <AnimatePresence>
+                {filteredProducts.map(prod => {
                   const margin = prod.sellingPrice - prod.costPrice;
                   const marginPercent = Math.round((margin / prod.sellingPrice) * 100) || 0;
-                  const isLow = prod.stock <= prod.minStock;
+                  const isLow = prod.stock <= customLowStockThreshold || prod.stock <= prod.minStock;
 
                   return (
-                    <tr key={prod.id} className="hover:bg-white/60 transition">
+                    <motion.tr layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.2 }} key={prod.id} className={`transition ${
+                      isLow 
+                        ? 'bg-amber-50/90 hover:bg-amber-100/90 border-s-4 border-amber-500 shadow-2xs' 
+                        : 'hover:bg-white/60'
+                    }`}>
                       {/* Name & Barcode */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-800">{isAr ? prod.nameAr : prod.nameEn}</div>
-                        <div className="text-xs font-mono text-indigo-600 mt-0.5">{prod.barcode}</div>
-                        {prod.returnPolicy && prod.returnPolicy !== '7_days' && (
-                          <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
-                            {prod.returnPolicy === 'no_return' ? (isAr ? '🚫 غير قابل للاسترجاع' : '🚫 Non-returnable') :
-                             prod.returnPolicy === 'exchange_only' ? (isAr ? '🔀 استبدال فقط' : '🔀 Exchange only') :
-                             prod.returnPolicy === '14_days' ? (isAr ? '🔄 استرجاع 14 يوم' : '🔄 14 Days return') : `🔄 ${prod.returnPolicy}`}
-                          </span>
-                        )}
+                        <div className="flex items-start gap-3">
+                          {prod.imageUrl ? (
+                            <img src={prod.imageUrl} alt={prod.nameEn} className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0" referrerPolicy="no-referrer" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-lg shrink-0">
+                              📦
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="font-bold text-slate-800">{isAr ? prod.nameAr : prod.nameEn}</div>
+                              {isLow && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-xs animate-pulse">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  <span>{isAr ? 'مخزون منخفض!' : 'Low Stock!'}</span>
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="text-xs font-mono text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">🏷️ {prod.barcode}</span>
+                              {prod.sku && (
+                                <span className="text-xs font-mono text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 font-bold">📦 SKU: {prod.sku}</span>
+                              )}
+                            </div>
+                            <div 
+                              onClick={() => {
+                                setSelectedBarcodeProduct(prod);
+                                setCustomBarcodeVal(prod.barcode);
+                                setBarcodeMode('existing');
+                                setIsBarcodeStudioOpen(true);
+                              }}
+                              title={isAr ? 'انقر لفتح استوديو الباركود والطباعة' : 'Click to open Barcode Studio & print'}
+                              className="mt-1.5 inline-block bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs cursor-pointer hover:border-purple-400 hover:shadow-sm transition group"
+                            >
+                              <JsBarcodeRenderer value={prod.barcode} height={20} width={1.1} displayValue={false} className="opacity-90 group-hover:opacity-100 max-h-5" />
+                            </div>
+                            {prod.returnPolicy && prod.returnPolicy !== '7_days' && (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-purple-100 text-purple-800 border border-purple-200">
+                                {prod.returnPolicy === 'no_return' ? (isAr ? '🚫 غير قابل للاسترجاع' : '🚫 Non-returnable') :
+                                 prod.returnPolicy === 'exchange_only' ? (isAr ? '🔀 استبدال فقط' : '🔀 Exchange only') :
+                                 prod.returnPolicy === '14_days' ? (isAr ? '🔄 استرجاع 14 يوم' : '🔄 14 Days return') : `🔄 ${prod.returnPolicy}`}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Category */}
@@ -367,13 +673,19 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                       {/* Stock Level */}
                       <td className="py-3.5 px-4 text-center">
                         <div className="flex flex-col items-center">
-                          <span className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm ${
-                            isLow ? 'bg-amber-100 text-amber-700 border border-amber-300 animate-pulse' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          <span className={`px-3 py-1 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition transform ${
+                            isLow ? 'bg-gradient-to-r from-amber-500 to-rose-600 text-white shadow-md scale-105 animate-pulse' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                           }`}>
-                            {isLow && <AlertTriangle className="w-3 h-3" />}
+                            {isLow && <AlertTriangle className="w-3.5 h-3.5 text-white" />}
                             <span>{prod.stock} {prod.unit === 'kg' ? (isAr ? 'كجم' : 'kg') : (isAr ? 'قطعة' : 'pcs')}</span>
                           </span>
-                          <span className="text-[10px] text-slate-500 mt-1">{isAr ? 'حد التنبيه:' : 'Min threshold:'} {prod.minStock}</span>
+                          {isLow ? (
+                            <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
+                              {isAr ? `⚠️ أقل من الحد (≤${customLowStockThreshold})` : `⚠️ Below threshold (≤${customLowStockThreshold})`}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 mt-1">{isAr ? 'حد التنبيه:' : 'Min threshold:'} {prod.minStock}</span>
+                          )}
                         </div>
                       </td>
 
@@ -459,9 +771,10 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                           </td>
                         </>
                       )}
-                    </tr>
+                    </motion.tr>
                   );
-                })
+                })}
+                </AnimatePresence>
               )}
             </tbody>
           </table>
@@ -469,9 +782,10 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
       </div>
 
       {/* ADD / EDIT PRODUCT MODAL */}
+      <AnimatePresence>
       {isModalOpen && editingProduct && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <form onSubmit={handleSaveForm} className="bg-slate-900 text-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-700 max-h-[90vh] overflow-y-auto flex flex-col gap-4 animate-in fade-in zoom-in duration-200">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <motion.form initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 20 }} transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }} onSubmit={handleSaveForm} className="bg-slate-900 text-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-700 max-h-[90vh] overflow-y-auto flex flex-col gap-4">
             <h3 className="text-lg font-bold text-white border-b border-slate-800 pb-3 flex items-center justify-between">
               <span>{Boolean(editingProduct.id) ? (isAr ? 'تعديل بيانات الصنف' : 'Edit Product') : (isAr ? 'إضافة صنف جديد' : 'Add New Product')}</span>
               <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white text-sm font-normal">✕</button>
@@ -500,10 +814,55 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
               </div>
             </div>
 
-            {/* Barcode & Category */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* SKU, Barcode & Category */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-slate-300 font-semibold block mb-1">{isAr ? 'الباركود (Barcode):' : 'Barcode:'}</label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs text-slate-300 font-semibold">{isAr ? 'الرمز الداخلي (SKU):' : 'Internal SKU:'}</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const autoSku = `SKU-${Math.floor(1000 + Math.random() * 9000)}`;
+                      setEditingProduct({ ...editingProduct, sku: autoSku });
+                    }}
+                    className="text-[10px] text-amber-400 hover:text-amber-300 font-bold"
+                  >
+                    🎲 {isAr ? 'توليد' : 'Gen'}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder={isAr ? 'مثال: SKU-1001' : 'e.g. SKU-1001'}
+                  value={editingProduct.sku || ''}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value.toUpperCase() })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-mono uppercase text-amber-300 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs text-slate-300 font-semibold">{isAr ? 'الباركود (Barcode):' : 'Barcode:'}</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const skuVal = editingProduct.sku;
+                      if (skuVal) {
+                        let numPart = skuVal.replace(/\D/g, '');
+                        if (!numPart || numPart.length < 4) {
+                          numPart = Math.floor(1000 + Math.random() * 9000).toString();
+                        }
+                        const autoBarcode = `200${numPart.padStart(6, '0')}`;
+                        setEditingProduct({ ...editingProduct, barcode: autoBarcode });
+                      } else {
+                        const autoGen = `6281001${Math.floor(10000 + Math.random() * 90000)}`;
+                        setEditingProduct({ ...editingProduct, barcode: autoGen });
+                      }
+                    }}
+                    className="text-[10px] text-emerald-400 hover:text-emerald-300 font-bold"
+                    title={isAr ? 'توليد باركود من الـ SKU أو تلقائي' : 'Generate barcode from SKU'}
+                  >
+                    ⚡ {isAr ? 'من الـ SKU' : 'From SKU'}
+                  </button>
+                </div>
                 <input
                   type="text"
                   required
@@ -619,6 +978,129 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
               </select>
             </div>
 
+            {/* Product Image Selection & Capture Section */}
+            <div className="mt-3 p-3.5 bg-slate-800/80 rounded-2xl border border-slate-700">
+              <div className="flex items-center justify-between mb-2.5">
+                <label className="text-xs text-indigo-300 font-bold flex items-center gap-1.5">
+                  <span>{isAr ? '🖼️ صورة المنتج (كاميرا، رفع أو جاهز):' : '🖼️ Product Image (Camera, Upload or Preset):'}</span>
+                </label>
+                {editingProduct.imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct({ ...editingProduct, imageUrl: undefined })}
+                    className="text-[10px] text-rose-400 hover:text-rose-300 font-extrabold flex items-center gap-1 bg-rose-950/40 px-2 py-0.5 rounded-lg border border-rose-800/50 cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>{isAr ? 'حذف الصورة' : 'Remove Image'}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Current Image Display or Camera Preview */}
+              <div className="flex flex-col sm:flex-row gap-3 items-center">
+                {isCameraActive ? (
+                  <div className="w-full flex flex-col items-center bg-black rounded-xl p-2 border border-slate-600">
+                    {cameraError ? (
+                      <div className="text-xs text-rose-400 p-4 text-center font-bold">{cameraError}</div>
+                    ) : (
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        className="w-full max-h-48 object-contain rounded-lg bg-black"
+                      />
+                    )}
+                    <div className="flex gap-2 mt-2 w-full">
+                      <button
+                        type="button"
+                        onClick={handleCapturePhoto}
+                        disabled={!!cameraError}
+                        className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4" />
+                        <span>{isAr ? 'التقاط الصورة الآن 📸' : 'Snap Photo Now 📸'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopCamera}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                      >
+                        {isAr ? 'إلغاء' : 'Cancel'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-20 h-20 rounded-2xl bg-slate-900 border border-slate-700 flex items-center justify-center overflow-hidden shrink-0 shadow-inner">
+                      {editingProduct.imageUrl ? (
+                        <img
+                          src={editingProduct.imageUrl}
+                          alt="preview"
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <ImageIcon className="w-8 h-8 text-slate-600" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 w-full flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsCameraActive(true);
+                          setCameraError(null);
+                        }}
+                        className="flex-1 min-w-[120px] py-2.5 px-3 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <Camera className="w-4 h-4 text-indigo-400" />
+                        <span>{isAr ? 'كاميرا الجهاز 📷' : 'Camera 📷'}</span>
+                      </button>
+
+                      <label className="flex-1 min-w-[120px] py-2.5 px-3 bg-slate-700/80 hover:bg-slate-700 text-slate-200 border border-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition">
+                        <Upload className="w-4 h-4 text-slate-400" />
+                        <span>{isAr ? 'رفع ملف صورة 📁' : 'Upload File 📁'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Local Placeholder Presets */}
+              <div className="mt-3 pt-2.5 border-t border-slate-700/60">
+                <span className="text-[11px] text-slate-400 font-medium block mb-2">
+                  {isAr ? 'أو اختر صورة جاهزة حسب قسم المنتج:' : 'Or choose a preset placeholder image:'}
+                </span>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-28 overflow-y-auto pr-1">
+                  {PLACEHOLDER_IMAGES.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setEditingProduct({ ...editingProduct, imageUrl: preset.url })}
+                      title={isAr ? preset.labelAr : preset.labelEn}
+                      className={`relative p-1.5 rounded-xl border flex flex-col items-center justify-center gap-1 transition cursor-pointer ${
+                        editingProduct.imageUrl === preset.url
+                          ? 'bg-indigo-600/40 border-indigo-500 ring-1 ring-indigo-400 shadow-sm'
+                          : 'bg-slate-900/60 border-slate-700 hover:bg-slate-700/60'
+                      }`}
+                    >
+                      <img src={preset.url} alt="preset" className="w-9 h-9 rounded-lg object-cover bg-slate-800" referrerPolicy="no-referrer" />
+                      <span className="text-[9px] truncate w-full text-center text-slate-300 font-bold">
+                        {(isAr ? preset.labelAr : preset.labelEn).split(' ')[0]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Submit & Cancel Buttons */}
             <div className="flex gap-3 pt-3 border-t border-slate-800 mt-2">
               <button
@@ -636,14 +1118,16 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                 {isAr ? 'إلغاء' : 'Cancel'}
               </button>
             </div>
-          </form>
-        </div>
+          </motion.form>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* BARCODE STUDIO MODAL (New & Old Products - Accessible to both Admin and Cashier) */}
+      <AnimatePresence>
       {isBarcodeStudioOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto animate-fadeIn print:hidden">
-          <div className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-2xl w-full p-6 text-white shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 overflow-y-auto print:hidden">
+          <motion.div initial={{ opacity: 0, scale: 0.92, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.92, y: 20 }} transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }} className="bg-[#0f172a] border border-slate-700 rounded-3xl max-w-2xl w-full p-6 text-white shadow-2xl flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center border-b border-slate-800 pb-4">
               <div className="flex items-center gap-3">
@@ -701,6 +1185,25 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
               >
                 <span>✨</span>
                 <span>{isAr ? 'لصنف جديد (توليد سريع وإضافة)' : 'New Product Quick Barcode'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  setBarcodeMode('sku');
+                  if (!selectedBarcodeProduct && products.length > 0) {
+                    setSelectedBarcodeProduct(products[0]);
+                    setSkuInputVal(products[0].sku || `SKU-${products[0].id.slice(-4) || '1001'}`);
+                  } else if (selectedBarcodeProduct) {
+                    setSkuInputVal(selectedBarcodeProduct.sku || `SKU-${selectedBarcodeProduct.id.slice(-4) || '1001'}`);
+                  }
+                }}
+                className={`flex-1 py-2.5 px-4 rounded-xl font-bold text-xs transition flex items-center justify-center gap-2 ${
+                  barcodeMode === 'sku'
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <span>⚡</span>
+                <span>{isAr ? 'توليد من SKU (الرمز الداخلي)' : 'Generate from SKU'}</span>
               </button>
             </div>
 
@@ -773,7 +1276,7 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                   </button>
                 </div>
               </div>
-            ) : (
+            ) : barcodeMode === 'new' ? (
               /* Content for New Product Mode */
               <div className="space-y-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
                 <div className="text-xs text-purple-300 font-bold flex items-center gap-1 mb-2">
@@ -856,6 +1359,106 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                   <span>{isAr ? '➕ حفظ الصنف الجديد مع هذا الباركود في المخزون الآن' : '➕ Save New Product with Barcode to Inventory'}</span>
                 </button>
               </div>
+            ) : (
+              /* Content for SKU Mode */
+              <div className="space-y-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <div className="text-xs text-amber-300 font-bold flex items-center gap-1.5 mb-1">
+                  <span>⚡</span>
+                  <span>{isAr ? 'توليد وطباعة باركود مخصص بناءً على رمز الصنف الداخلي (SKU):' : 'Generate & print custom barcode based on internal SKU:'}</span>
+                </div>
+
+                {/* Select Product */}
+                <div>
+                  <label className="text-xs text-slate-300 font-semibold block mb-1.5">
+                    {isAr ? 'اختر الصنف لربطه وتوليد باركود الـ SKU:' : 'Select Product to generate SKU barcode:'}
+                  </label>
+                  <select
+                    value={selectedBarcodeProduct?.id || ''}
+                    onChange={(e) => {
+                      const found = products.find(p => p.id === e.target.value);
+                      if (found) {
+                        setSelectedBarcodeProduct(found);
+                        setSkuInputVal(found.sku || `SKU-${found.id.slice(-4) || '1001'}`);
+                      }
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-white font-bold focus:outline-none focus:border-amber-500"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {isAr ? p.nameAr : p.nameEn} ({p.sellingPrice} {settings.currency}) {p.sku ? `[SKU: ${p.sku}]` : ''} - [{p.barcode}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* SKU Code Input & Gen Rule */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-950/60 p-4 rounded-xl border border-slate-800">
+                  <div>
+                    <label className="text-xs text-slate-300 font-bold block mb-1">
+                      {isAr ? 'قيمة رمز الصنف الداخلي (SKU):' : 'Internal SKU Value:'}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. SKU-1001, COF-COL-01"
+                        value={skuInputVal}
+                        onChange={(e) => setSkuInputVal(e.target.value.toUpperCase())}
+                        className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono tracking-wider text-amber-300 font-bold uppercase focus:outline-none focus:border-amber-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSkuInputVal(`SKU-${Math.floor(1000 + Math.random() * 9000)}`)}
+                        className="px-3 py-2 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 text-amber-300 text-xs font-bold transition flex items-center gap-1"
+                      >
+                        <span>🎲</span>
+                        <span>{isAr ? 'توليد' : 'Gen'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-slate-300 font-bold block mb-1">
+                      {isAr ? 'نمط وقاعدة تحويل الـ SKU إلى باركود:' : 'SKU to Barcode Conversion Rule:'}
+                    </label>
+                    <select
+                      value={skuBarcodeRule}
+                      onChange={(e) => setSkuBarcodeRule(e.target.value as any)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold focus:outline-none focus:border-amber-500"
+                    >
+                      <option value="numeric_ean">{isAr ? '1. رقمي تجاري مخصص (يبدأ بـ 200... متوافق مع كافة الموازين والقوارئ)' : '1. Numeric Retail Barcode (Starts with 200... EAN compatible)'}</option>
+                      <option value="exact_sku">{isAr ? '2. مطابق لنص الـ SKU حرفياً (لأجهزة الليزر والكاميرات الحديثة)' : '2. Exact SKU String (Matches SKU characters exactly)'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Apply and Save button */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!selectedBarcodeProduct) return;
+                    if (!skuInputVal.trim()) {
+                      alert(isAr ? 'يرجى كتابة رمز الصنف الداخلي SKU أولاً!' : 'Please enter SKU value first!');
+                      return;
+                    }
+                    const genBarcode = getSkuGeneratedBarcode(skuInputVal, skuBarcodeRule);
+                    const updated: Product = {
+                      ...selectedBarcodeProduct,
+                      sku: skuInputVal.trim(),
+                      barcode: genBarcode
+                    };
+                    const success = await onSaveProduct(updated);
+                    if (success) {
+                      setSelectedBarcodeProduct(updated);
+                      setCustomBarcodeVal(genBarcode);
+                      alert(isAr ? `تم حفظ وربط الـ SKU والباركود الجديد (${genBarcode}) بالصنف بنجاح! 💾✨` : `SKU & Barcode (${genBarcode}) applied to item successfully! 💾✨`);
+                    }
+                  }}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-black shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  <span>{isAr ? '💾 حفظ وتطبيق باركود الـ SKU على هذا الصنف في المخزون' : '💾 Apply & Save SKU Barcode to Inventory Item'}</span>
+                </button>
+              </div>
             )}
 
             {/* Barcode Visual Preview Box */}
@@ -863,22 +1466,95 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
               <div className="text-xs font-extrabold text-slate-700 tracking-wide mb-1">
                 {settings.storeNameAr || (isAr ? 'اسم المتجر' : 'Store Name')}
               </div>
-              <div className="text-base font-black text-black mb-2 text-center max-w-sm truncate">
-                {barcodeMode === 'existing'
+              <div className="text-base font-black text-black mb-1 text-center max-w-sm truncate">
+                {barcodeMode === 'sku'
+                  ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : (isAr ? 'صنف SKU' : 'SKU Item'))
+                  : barcodeMode === 'existing'
                   ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : 'اسم الصنف')
                   : (newBarcodeNameAr || (isAr ? 'صنف جديد' : 'New Item'))}
               </div>
+              {(barcodeMode === 'sku' ? skuInputVal : selectedBarcodeProduct?.sku) && (
+                <div className="text-[11px] font-mono font-bold text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-300 mb-1">
+                  📦 SKU: {barcodeMode === 'sku' ? skuInputVal : selectedBarcodeProduct?.sku}
+                </div>
+              )}
               <div className="h-16 flex items-end justify-center gap-[1.5px] px-4 w-full max-w-xs overflow-hidden bg-white my-1">
-                {renderBarcodeBars(barcodeMode === 'existing' ? (customBarcodeVal || '0000000') : generatedNewBarcode)}
+                {renderBarcodeBars(
+                  barcodeMode === 'sku'
+                    ? getSkuGeneratedBarcode(skuInputVal, skuBarcodeRule)
+                    : barcodeMode === 'existing'
+                    ? (customBarcodeVal || '0000000')
+                    : generatedNewBarcode
+                )}
               </div>
               <div className="text-sm font-mono font-extrabold tracking-[0.2em] text-black">
-                {barcodeMode === 'existing' ? (customBarcodeVal || '0000000') : generatedNewBarcode}
+                {barcodeMode === 'sku'
+                  ? getSkuGeneratedBarcode(skuInputVal, skuBarcodeRule)
+                  : barcodeMode === 'existing'
+                  ? (customBarcodeVal || '0000000')
+                  : generatedNewBarcode}
               </div>
               <div className="mt-2 pt-1 border-t border-slate-300 text-xs font-black text-emerald-700 flex items-center gap-1">
                 <span>{isAr ? 'السعر: ' : 'Price: '}</span>
                 <span className="text-sm">
-                  {barcodeMode === 'existing' ? (selectedBarcodeProduct?.sellingPrice || 0) : newBarcodePrice} {settings.currency}
+                  {barcodeMode === 'sku' || barcodeMode === 'existing' ? (selectedBarcodeProduct?.sellingPrice || 0) : newBarcodePrice} {settings.currency}
                 </span>
+              </div>
+            </div>
+
+            {/* Label Style Selector */}
+            <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <label className="text-xs text-slate-300 font-bold whitespace-nowrap flex items-center gap-1.5">
+                <span>🎨</span>
+                <span>{isAr ? 'تصميم وقالب الطباعة:' : 'Label Format Style:'}</span>
+              </label>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setLabelStyle('sticker')}
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                    labelStyle === 'sticker'
+                      ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                  }`}
+                >
+                  {isAr ? '🏷️ ملصق باركود صغير (3x2 سم)' : '🏷️ Small Sticker (3x2 cm)'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLabelStyle('shelf')}
+                  className={`flex-1 sm:flex-initial px-4 py-2 rounded-xl text-xs font-bold border transition ${
+                    labelStyle === 'shelf'
+                      ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                      : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                  }`}
+                >
+                  {isAr ? '📋 بطاقة سعر الرف (6x4 سم كبيرة)' : '📋 Shelf Price Tag (6x4 cm)'}
+                </button>
+              </div>
+            </div>
+
+            {/* Barcode Encoding Format Selector */}
+            <div className="bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <label className="text-xs text-slate-300 font-bold whitespace-nowrap flex items-center gap-1.5">
+                <span>⚡</span>
+                <span>{isAr ? 'نظام التشفير (JsBarcode):' : 'Barcode Encoding Format:'}</span>
+              </label>
+              <div className="flex gap-1.5 w-full sm:w-auto flex-wrap">
+                {(['CODE128', 'EAN13', 'CODE39', 'UPC'] as const).map((fmt) => (
+                  <button
+                    key={fmt}
+                    type="button"
+                    onClick={() => setBarcodeFormat(fmt)}
+                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                      barcodeFormat === fmt
+                        ? 'bg-amber-600 text-white border-amber-400 shadow-md'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    {fmt === 'CODE128' ? (isAr ? 'CODE-128 (الشائع للمتاجر)' : 'CODE-128 (Standard)') : fmt}
+                  </button>
+                ))}
               </div>
             </div>
 
@@ -921,24 +1597,74 @@ export const InventoryManager: React.FC<InventoryManagerProps> = ({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* PRINTABLE BARCODE LABELS CONTAINER (Hidden normally, rendered on window.print()) */}
       <div className="print-barcode-container hidden print:block print:fixed print:inset-0 print:bg-white print:z-[999999] print:p-4 print:overflow-visible">
         <div className="text-center mb-4 font-black text-lg border-b pb-2 text-black">
-          {isAr ? `ملصقات باركود: ` : `Barcode Labels: `} {barcodeMode === 'existing' ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : 'صنف') : (newBarcodeNameAr || (isAr ? 'صنف جديد' : 'New Product'))}
+          {isAr ? `ملصقات باركود: ` : `Barcode Labels: `} {barcodeMode === 'sku' ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : 'صنف SKU') : barcodeMode === 'existing' ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : 'صنف') : (newBarcodeNameAr || (isAr ? 'صنف جديد' : 'New Product'))}
+          <span className="text-xs font-normal block text-slate-600">{labelStyle === 'shelf' ? (isAr ? 'قالب: بطاقة رفوف الأسعار الكبيرة (6x4 سم)' : 'Format: Shelf Price Tag') : (isAr ? 'قالب: ملصق باركود صغير (3x2 سم)' : 'Format: Small Sticker')}</span>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className={labelStyle === 'shelf' ? "grid grid-cols-2 gap-6" : "grid grid-cols-3 gap-4"}>
           {Array.from({ length: barcodeLabelCount }).map((_, idx) => {
-            const prodName = barcodeMode === 'existing' ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : 'صنف') : (newBarcodeNameAr || (isAr ? 'صنف جديد' : 'New Product'));
-            const prodCode = barcodeMode === 'existing' ? (customBarcodeVal || selectedBarcodeProduct?.barcode || '0000000') : generatedNewBarcode;
-            const prodPrice = barcodeMode === 'existing' ? selectedBarcodeProduct?.sellingPrice : newBarcodePrice;
+            const prodName = barcodeMode === 'sku'
+              ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : (isAr ? 'صنف SKU' : 'SKU Item'))
+              : barcodeMode === 'existing'
+              ? (selectedBarcodeProduct ? (isAr ? selectedBarcodeProduct.nameAr : selectedBarcodeProduct.nameEn) : 'صنف')
+              : (newBarcodeNameAr || (isAr ? 'صنف جديد' : 'New Product'));
+            const prodCode = barcodeMode === 'sku'
+              ? getSkuGeneratedBarcode(skuInputVal, skuBarcodeRule)
+              : barcodeMode === 'existing'
+              ? (customBarcodeVal || selectedBarcodeProduct?.barcode || '0000000')
+              : generatedNewBarcode;
+            const prodPrice = barcodeMode === 'sku' || barcodeMode === 'existing'
+              ? (selectedBarcodeProduct?.sellingPrice || 0)
+              : newBarcodePrice;
+            const prodCat = barcodeMode === 'sku' || barcodeMode === 'existing'
+              ? selectedBarcodeProduct?.category
+              : newBarcodeCategory;
+            const prodSku = barcodeMode === 'sku' ? skuInputVal : selectedBarcodeProduct?.sku;
+
+            if (labelStyle === 'shelf') {
+              return (
+                <div key={idx} className="border-4 border-black p-4 rounded-2xl text-center flex flex-col items-center justify-between break-inside-avoid bg-white shadow-none min-h-[160px]">
+                  <div className="w-full flex justify-between items-center border-b-2 border-black pb-1.5 mb-2">
+                    <span className="text-xs font-black text-black">{settings.storeNameAr || (isAr ? 'المتجر' : 'Store')}</span>
+                    <span className="text-[10px] bg-black text-white px-2 py-0.5 rounded font-bold">{prodCat || (isAr ? 'صنف عام' : 'General')}</span>
+                  </div>
+                  <div className="text-lg font-black text-black leading-tight w-full my-1">{prodName || 'صنف'}</div>
+                  {prodSku && (
+                    <div className="text-xs font-mono font-extrabold text-black bg-slate-100 border border-black/30 px-2 py-0.5 rounded-md my-0.5">
+                      SKU: {prodSku}
+                    </div>
+                  )}
+                  <div className="my-2 bg-black text-white px-4 py-2 rounded-xl w-full flex items-center justify-center gap-2">
+                    <span className="text-xs font-bold">{isAr ? 'السعر:' : 'PRICE:'}</span>
+                    <span className="text-3xl font-black font-mono tracking-tight">{prodPrice || 0}</span>
+                    <span className="text-xs font-bold">{settings.currency}</span>
+                  </div>
+                  <div className="w-full flex items-center justify-between pt-1 border-t border-black/20 text-black mt-1">
+                    <div className="flex items-end justify-center gap-[1px] h-8 overflow-hidden bg-white">
+                      {renderBarcodeBars(prodCode)}
+                    </div>
+                    <span className="text-xs font-mono font-bold tracking-wider">{prodCode}</span>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <div key={idx} className="border-2 border-black p-3 rounded-xl text-center flex flex-col items-center justify-center break-inside-avoid bg-white">
                 <div className="text-[11px] font-bold text-slate-800 mb-0.5">{settings.storeNameAr || (isAr ? 'المتجر' : 'Store')}</div>
-                <div className="text-sm font-black text-black truncate w-full mb-1">{prodName || 'صنف'}</div>
+                <div className="text-sm font-black text-black truncate w-full mb-0.5">{prodName || 'صنف'}</div>
+                {prodSku && (
+                  <div className="text-[10px] font-mono font-bold text-black bg-slate-100 border border-black/30 px-1.5 py-0.5 rounded mb-1">
+                    SKU: {prodSku}
+                  </div>
+                )}
                 <div className="my-1 flex items-end justify-center gap-[1px] h-12 overflow-hidden w-full px-2 bg-white">
                   {renderBarcodeBars(prodCode)}
                 </div>

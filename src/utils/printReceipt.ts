@@ -7,12 +7,14 @@ import { SaleInvoice, SystemSettings } from '../types';
 export function generateReceiptHtml(invoice: SaleInvoice, settings: SystemSettings, isAr: boolean): string {
   const isCancelled = invoice.status === 'cancelled';
   const isRefunded = invoice.status === 'refunded';
+  const isPartialRefund = invoice.status === 'partial_refund';
 
-  const statusBannerHtml = (isCancelled || isRefunded) ? `
-    <div style="background-color: ${isCancelled ? '#ffe4e6' : '#fef3c7'}; color: ${isCancelled ? '#9f1239' : '#92400e'}; border: 2px solid ${isCancelled ? '#f43f5e' : '#f59e0b'}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; font-weight: bold;">
+  const statusBannerHtml = (isCancelled || isRefunded || isPartialRefund) ? `
+    <div style="background-color: ${isCancelled ? '#ffe4e6' : isPartialRefund ? '#eff6ff' : '#fef3c7'}; color: ${isCancelled ? '#9f1239' : isPartialRefund ? '#1e40af' : '#92400e'}; border: 2px solid ${isCancelled ? '#f43f5e' : isPartialRefund ? '#3b82f6' : '#f59e0b'}; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 12px; font-weight: bold;">
       <div style="font-size: 14px; text-transform: uppercase;">
-        ${isCancelled ? (isAr ? '⚠️ [ فاتورة ملغاة / باطلة ] ⚠️' : '⚠️ [ VOID / CANCELLED INVOICE ] ⚠️') : (isAr ? '🔄 [ فاتورة مسترجعة ] 🔄' : '🔄 [ REFUNDED INVOICE ] 🔄')}
+        ${isCancelled ? (isAr ? '⚠️ [ فاتورة ملغاة / باطلة ] ⚠️' : '⚠️ [ VOID / CANCELLED INVOICE ] ⚠️') : isPartialRefund ? (isAr ? '🔄 [ إشعار دائن - استرجاع جزئي ] 🔄' : '🔄 [ CREDIT NOTE - PARTIAL REFUND ] 🔄') : (isAr ? '🔄 [ فاتورة مسترجعة بالكامل ] 🔄' : '🔄 [ FULLY REFUNDED INVOICE ] 🔄')}
       </div>
+      ${invoice.refundedAmount ? `<div style="font-size: 12px; font-weight: 900; margin-top: 4px; color: #1e3a8a;">${isAr ? 'المبلغ المسترجع: ' : 'Refunded Amount: '} ${invoice.refundedAmount} ${settings.currency}</div>` : ''}
       ${invoice.cancelledReason ? `<div style="font-size: 11px; margin-top: 4px;">${isAr ? 'السبب: ' : 'Reason: '}${invoice.cancelledReason}</div>` : ''}
     </div>
   ` : '';
@@ -331,6 +333,11 @@ export function generateReceiptHtml(invoice: SaleInvoice, settings: SystemSettin
 export function triggerSmartPrint(invoice: SaleInvoice, settings: SystemSettings, isAr: boolean): void {
   try {
     const htmlContent = generateReceiptHtml(invoice, settings, isAr);
+    if ((window as any).electronAPI && typeof (window as any).electronAPI.printReceipt === 'function' && settings.defaultPrinter && settings.defaultPrinter !== 'default') {
+      console.log(`[SmartPrint] Printing via Electron IPC to hardware printer: ${settings.defaultPrinter}`);
+      (window as any).electronAPI.printReceipt(htmlContent, settings.defaultPrinter);
+      return;
+    }
     const printIframe = document.createElement('iframe');
     printIframe.style.position = 'fixed';
     printIframe.style.right = '0';

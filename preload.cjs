@@ -12,5 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
   getPaths: () => ipcRenderer.invoke('app:get-paths'),
   openLogs: () => ipcRenderer.invoke('app:open-logs'),
-  openDataDir: () => ipcRenderer.invoke('app:open-data-dir')
+  openDataDir: () => ipcRenderer.invoke('app:open-data-dir'),
+  getPrinters: () => ipcRenderer.invoke('app:get-printers'),
+  printReceipt: (html, printerName) => ipcRenderer.invoke('app:print-receipt', { html, printerName })
 });

@@ -11,6 +11,7 @@
       "stock": 48,
       "minStock": 8,
       "unit": "piece",
+      "imageUrl": "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&w=300&q=80",
       "updatedAt": "2026-07-25T05:47:42.808Z"
     },
     {
@@ -24,6 +25,7 @@
       "stock": 16,
       "minStock": 15,
       "unit": "piece",
+      "imageUrl": "https://images.unsplash.com/photo-1549007994-cb92caebd54b?auto=format&fit=crop&w=300&q=80",
       "updatedAt": "2026-07-25T07:46:19.589Z"
     },
     {
@@ -37,6 +39,7 @@
       "stock": 18,
       "minStock": 5,
       "unit": "piece",
+      "imageUrl": "https://images.unsplash.com/photo-1588964895597-cfccd6e2dbf9?auto=format&fit=crop&w=300&q=80",
       "updatedAt": "2026-07-25T08:13:09.369Z"
     },
     {
@@ -50,6 +53,7 @@
       "stock": 12,
       "minStock": 5,
       "unit": "piece",
+      "imageUrl": "https://images.unsplash.com/photo-1587049352847-4a222e784d38?auto=format&fit=crop&w=300&q=80",
       "updatedAt": "2026-07-25T05:47:42.808Z"
     }
   ],

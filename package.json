@@ -13,8 +13,9 @@
     "lint": "tsc --noEmit",
     "electron": "electron electron.js",
     "electron:dev": "concurrently -k \"tsx server.ts\" \"wait-on http://localhost:3000 && electron electron.js\"",
-    "dist": "npm run build && electron-builder --win portable --x64",
-    "dist-x64": "npm run build && electron-builder --win portable --x64",
+    "dist": "npm run build && electron-builder --win --x64",
+    "dist:setup": "npm run build && electron-builder --win nsis --x64",
+    "dist:portable": "npm run build && electron-builder --win portable --x64",
     "build:win": "npm run build && electron-builder --win --x64"
   },
   "build": {
@@ -39,6 +40,12 @@
     "win": {
       "target": [
         {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
           "target": "portable",
           "arch": [
             "x64"
@@ -56,16 +63,22 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     }
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.1.14",
+    "@types/html2canvas": "^1.0.0",
     "@vitejs/plugin-react": "^5.0.4",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "html2canvas": "^1.4.1",
+    "jsbarcode": "^3.12.3",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.1",
@@ -76,6 +89,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
+    "@types/jsbarcode": "^3.11.4",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^10.0.4",

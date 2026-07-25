@@ -14,6 +14,7 @@ import { InventoryManager } from './components/InventoryManager';
 import { CustomerSupplierManager } from './components/CustomerSupplierManager';
 import { AccountingDashboard } from './components/AccountingDashboard';
 import { FinancialReports } from './components/FinancialReports';
+import { TaxReturnManager } from './components/TaxReturnManager';
 import { AIFinancialAdvisor } from './components/AIFinancialAdvisor';
 import { DesktopGuideView } from './components/DesktopGuideView';
 import { StoreSettingsView } from './components/StoreSettingsView';
@@ -70,6 +71,12 @@ export default function App() {
     document.documentElement.classList.toggle('dark-mode', isDark);
     document.body.classList.toggle('dark-mode', isDark);
   }, [settings.theme]);
+
+  // Sync browser document title with store name
+  useEffect(() => {
+    const activeStoreName = (lang === 'ar' ? settings.storeNameAr : settings.storeNameEn) || 'Smart POS & Accounting';
+    document.title = `${activeStoreName} | Smart POS`;
+  }, [settings.storeNameAr, settings.storeNameEn, lang]);
 
   // Fetch all data from Offline Backend API
   const fetchAllData = useCallback(async () => {
@@ -281,6 +288,10 @@ export default function App() {
         body: JSON.stringify(newSettings)
       });
       if (!res.ok) throw new Error('Failed to update settings');
+      const data = await res.json();
+      if (data && data.settings) {
+        setSettings(data.settings);
+      }
       await fetchAllData();
       return true;
     } catch (err: any) {
@@ -426,7 +437,9 @@ export default function App() {
             settings={settings}
             lang={lang}
             userRole={userRole}
+            customers={customers}
             onUpdateInvoiceStatus={handleUpdateInvoiceStatus}
+            onUpdateSettings={handleUpdateSettings}
           />
         )}
 
@@ -453,6 +466,7 @@ export default function App() {
             onSaveSupplier={handleSaveSupplier}
             onDeleteCustomer={handleDeleteCustomer}
             onDeleteSupplier={handleDeleteSupplier}
+            onRefreshData={fetchAllData}
           />
         )}
 
@@ -477,6 +491,15 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'tax_return' && (
+          <TaxReturnManager
+            sales={sales}
+            expenses={expenses}
+            settings={settings}
+            lang={lang}
+          />
+        )}
+
         {activeTab === 'ai' && (
           <AIFinancialAdvisor
             insights={insights}
@@ -493,6 +516,7 @@ export default function App() {
             lang={lang}
             userRole={userRole}
             onUpdateSettings={handleUpdateSettings}
+            onRefreshData={fetchAllData}
           />
         )}
 

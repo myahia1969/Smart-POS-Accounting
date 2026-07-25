@@ -22,7 +22,11 @@ import {
   Sparkles,
   AlertTriangle,
   HelpCircle,
-  RefreshCw
+  RefreshCw,
+  Database,
+  Download,
+  Upload,
+  Printer
 } from 'lucide-react';
 import { SystemSettings, Language } from '../types';
 
@@ -31,6 +35,7 @@ interface StoreSettingsViewProps {
   lang: Language;
   userRole?: 'admin' | 'cashier';
   onUpdateSettings: (newSettings: Partial<SystemSettings>) => Promise<boolean>;
+  onRefreshData?: () => void;
 }
 
 interface CurrencyPreset {
@@ -67,6 +72,7 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
   lang,
   userRole = 'cashier',
   onUpdateSettings,
+  onRefreshData,
 }) => {
   const isAr = lang === 'ar';
   const [formData, setFormData] = useState<SystemSettings>({ ...settings });
@@ -76,10 +82,139 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [confirmPinInput, setConfirmPinInput] = useState('');
 
+  // Printer selection dialog state
+  const [isPrinterModalOpen, setIsPrinterModalOpen] = useState(false);
+  const [availablePrinters, setAvailablePrinters] = useState<{ name: string; displayName?: string; description?: string; status?: number; isDefault?: boolean }[]>([]);
+  const [isLoadingPrinters, setIsLoadingPrinters] = useState(false);
+  const [isElectronEnv, setIsElectronEnv] = useState(false);
+
+  const fetchPrinters = async () => {
+    setIsLoadingPrinters(true);
+    try {
+      if ((window as any).electronAPI && typeof (window as any).electronAPI.getPrinters === 'function') {
+        setIsElectronEnv(true);
+        const list = await (window as any).electronAPI.getPrinters();
+        if (Array.isArray(list) && list.length > 0) {
+          setAvailablePrinters(list);
+          setIsLoadingPrinters(false);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch printers via Electron IPC:', e);
+    }
+    
+    // Fallback/Demo presets for Web / Node.js Dev Mode preview
+    setIsElectronEnv(false);
+    setAvailablePrinters([
+      { name: 'default', displayName: isAr ? '🖨️ طابعة النظام الافتراضية (System Default / Window Print)' : '🖨️ System Default Printer (Window Print)', isDefault: true },
+      { name: 'EPSON_TM_T88VI', displayName: '🖨️ EPSON TM-T88VI Thermal Receipt Printer (USB)', description: 'ESC/POS 80mm Direct Thermal' },
+      { name: 'Star_TSP143III', displayName: '🖨️ Star TSP143III Bi-directional Receipt (LAN/USB)', description: 'High speed receipt cutter' },
+      { name: 'Xprinter_XP_80C', displayName: '🖨️ Xprinter XP-80C Thermal POS Printer', description: 'Standard 80mm ESC/POS' },
+      { name: 'Bixolon_SRP_330II', displayName: '🖨️ Bixolon SRP-330II POS Receipt Printer', description: 'Thermal barcode receipt printer' },
+      { name: 'Microsoft_Print_To_PDF', displayName: '📄 Microsoft Print to PDF', description: 'Virtual PDF output document' }
+    ]);
+    setIsLoadingPrinters(false);
+  };
+
+  const handleTestPrint = async (printerName: string) => {
+    if ((window as any).electronAPI && typeof (window as any).electronAPI.printReceipt === 'function' && printerName !== 'default') {
+      const sampleHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+          <h2>${isAr ? 'فاتورة تجريبية - فحص الطابعة' : 'Test Receipt - Printer Check'}</h2>
+          <p><strong>${formData.storeNameAr}</strong></p>
+          <p>${formData.storeNameEn}</p>
+          <hr />
+          <p>${isAr ? 'اسم الطابعة المحددة:' : 'Selected Printer:'} <b>${printerName}</b></p>
+          <p>${isAr ? 'تم الاتصال وإرسال أمر الطباعة بنجاح من نظام المحاسبة الذكي.' : 'Successfully sent print job from Smart POS system.'}</p>
+          <hr />
+          <p style="font-size: 12px;">${new Date().toLocaleString()}</p>
+        </div>
+      `;
+      await (window as any).electronAPI.printReceipt(sampleHtml, printerName);
+      alert(isAr ? `تم إرسال أمر الطباعة التجريبية إلى الطابعة "${printerName}" بنجاح! 🖨️` : `Test print job sent to printer "${printerName}" successfully! 🖨️`);
+    } else {
+      alert(isAr ? `تم تحديد الطابعة "${printerName}". في وضع المتصفح الحالي (Web Mode)، يتم استخدام نافذة الطباعة القياسية للنظام عند إصدار الفاتورة.` : `Selected "${printerName}". In Web Mode, the standard OS print dialog will be used for receipts.`);
+    }
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [backupMessage, setBackupMessage] = useState<string | null>(null);
+
+  const handleExportBackup = async () => {
+    setIsExporting(true);
+    setBackupMessage(null);
+    try {
+      const res = await fetch('/api/backup/export', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data.backup, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        const dateStr = new Date().toISOString().slice(0, 10);
+        downloadAnchor.setAttribute("download", `store_backup_${dateStr}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        setBackupMessage(isAr ? '✅ تم تصدير وتحميل النسخة الاحتياطية بنجاح!' : '✅ Backup exported and downloaded successfully!');
+      } else {
+        throw new Error(data.error || 'Failed to export backup');
+      }
+    } catch (err: any) {
+      alert(isAr ? `خطأ في التصدير: ${err.message}` : `Export Error: ${err.message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!window.confirm(isAr ? '⚠️ تحذير: استعادة النسخة الاحتياطية ستستبدل جميع بيانات المتجر الحالية (المنتجات، الفواتير، والعملاء). هل أنت متأكد؟' : '⚠️ WARNING: Restoring a backup will replace all current store data (products, invoices, customers). Are you sure?')) {
+      e.target.value = '';
+      return;
+    }
+
+    setIsImporting(true);
+    setBackupMessage(null);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const content = event.target?.result as string;
+        const backupData = JSON.parse(content);
+        const res = await fetch('/api/backup/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ backup: backupData })
+        });
+        const result = await res.json();
+        if (res.ok && result.success) {
+          setBackupMessage(isAr ? '🎉 تم استعادة البيانات بنجاح! سيتم تحديث النظام...' : '🎉 Data restored successfully! Refreshing system...');
+          setTimeout(() => {
+            if (onRefreshData) onRefreshData();
+            window.location.reload();
+          }, 1500);
+        } else {
+          throw new Error(result.error || 'Failed to restore backup');
+        }
+      } catch (err: any) {
+        alert(isAr ? `خطأ في استعادة الملف: ${err.message}` : `Restore Error: ${err.message}`);
+      } finally {
+        setIsImporting(false);
+        e.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
   // Sync state if settings prop updates from server
   useEffect(() => {
-    setFormData({ ...settings });
-  }, [settings]);
+    if (!isSaving && !isPinModalOpen) {
+      setFormData({ ...settings });
+    }
+  }, [settings, isSaving, isPinModalOpen]);
 
   const handleChange = (field: keyof SystemSettings, value: any) => {
     if (userRole !== 'admin') {
@@ -187,6 +322,142 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Printer Selection Dialog Modal */}
+      {isPrinterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 flex flex-col gap-5 max-h-[85vh] overflow-hidden">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                  <Printer className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+                    <span>{isAr ? 'إعدادات طابعة إيصالات الكاشير' : 'Receipt Printer Selection Dialog'}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5">
+                    <span>{isAr ? 'عبر واجهة Electron (webContents.getPrinters API)' : 'Powered by Electron (webContents.getPrinters API)'}</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-black ${isElectronEnv ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                      {isElectronEnv ? (isAr ? '⚡ متصل ببيئة Electron' : '⚡ Electron Desktop Active') : (isAr ? '🌐 وضع المتصفح (Web Mode)' : '🌐 Web Browser Preview Mode')}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPrinterModalOpen(false)}
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs">
+              <div className="text-slate-600 font-medium">
+                {isAr ? 'الطابعة الحالية المحددة:' : 'Current Default Printer:'} 
+                <span className="font-black text-indigo-700 ml-1 rtl:mr-1 rtl:ml-0">
+                  {formData.defaultPrinter || (isAr ? 'طابعة النظام الافتراضية' : 'System Default OS Printer')}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={fetchPrinters}
+                disabled={isLoadingPrinters}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 font-bold border border-slate-300 transition flex items-center gap-1.5 shadow-2xs"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingPrinters ? 'animate-spin text-indigo-600' : ''}`} />
+                <span>{isAr ? 'تحديث قائمة الطابعات' : 'Refresh Printers'}</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {isLoadingPrinters ? (
+                <div className="py-12 text-center text-slate-400 flex flex-col items-center gap-3">
+                  <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
+                  <span className="text-sm font-bold">{isAr ? 'جاري فحص الطابعات المتصلة بالنظام...' : 'Scanning system printers via getPrinters API...'}</span>
+                </div>
+              ) : availablePrinters.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-6">
+                  <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                  <p className="font-bold text-sm">{isAr ? 'لم يتم العثور على طابعات متصلة بالنظام حالياً' : 'No printers detected on this system'}</p>
+                  <p className="text-xs text-slate-400 mt-1">{isAr ? 'تأكد من توصيل طابعة الإيصالات عبر USB أو شبكة LAN وتشغيلها.' : 'Ensure your thermal receipt printer is powered on and connected via USB/LAN.'}</p>
+                </div>
+              ) : (
+                availablePrinters.map((printer, idx) => {
+                  const isSelected = formData.defaultPrinter === printer.name || (!formData.defaultPrinter && printer.name === 'default');
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => handleChange('defaultPrinter', printer.name === 'default' ? undefined : printer.name)}
+                      className={`p-4 rounded-2xl border transition cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+                        isSelected 
+                          ? 'bg-indigo-50/80 border-indigo-500 shadow-md ring-1 ring-indigo-500' 
+                          : 'bg-white hover:bg-slate-50 border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                          isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          <Printer className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-extrabold text-sm text-slate-800">
+                              {printer.displayName || printer.name}
+                            </h4>
+                            {printer.isDefault && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
+                                {isAr ? 'طابعة الويندوز الافتراضية 🖥️' : 'OS Default 🖥️'}
+                              </span>
+                            )}
+                            {isSelected && (
+                              <span className="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-black shadow-2xs">
+                                {isAr ? 'تم الاختيار ✓' : 'Selected ✓'}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                            {printer.description || (isAr ? 'طابعة إيصالات كاشير حرارية جاهزة للعمل' : 'Thermal ESC/POS receipt printer ready')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTestPrint(printer.name);
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold text-xs transition border border-slate-200 hover:border-indigo-300 flex items-center gap-1"
+                          title={isAr ? 'إرسال أمر طباعة تجريبي' : 'Send test receipt print job'}
+                        >
+                          <span>{isAr ? '🧪 تجربة الطباعة' : '🧪 Test Print'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100 bg-white">
+              <div className="text-[11px] text-slate-500">
+                {isAr ? '💡 سيتم استخدام هذه الطابعة تلقائياً في شاشة الكاشير السريع دون طلب تأكيد.' : '💡 This printer will be used automatically during POS checkout.'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPrinterModalOpen(false)}
+                className="px-6 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-500/20 transition"
+              >
+                {isAr ? 'تم، حفظ وإغلاق ✓' : 'Done, Save & Close ✓'}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -455,7 +726,7 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
           </div>
         </div>
 
-        {/* SECTION 3: RECEIPT FOOTER */}
+        {/* SECTION 3: RECEIPT FOOTER & RETURN POLICIES */}
         <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/80 shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff] transition hover:shadow-[10px_10px_20px_#cbd3e0,-10px_-10px_20px_#ffffff]">
           <div className="flex items-center gap-3 pb-5 border-b border-slate-200/80 mb-6">
             <div className="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center shadow-sm">
@@ -463,27 +734,95 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-extrabold text-slate-800">
-                {isAr ? '3. تذييل وسياسة فواتير المبيعات' : '3. Receipt Footer & Returns Policy'}
+                {isAr ? '3. تذييل وسياسات الاسترجاع والاستبدال المعتمدة' : '3. Receipt Footer & Official Returns Policy'}
               </h2>
               <p className="text-xs text-slate-500">
                 {isAr
-                  ? 'اكتب رسالة الشكر أو شروط الاسترجاع والاستبدال التي تُطبع أسفل إيصال العميل.'
-                  : 'Customize thank you message or returns policy printed at the bottom of customer receipts.'}
+                  ? 'قم بإدارة شروط الاسترجاع والاستبدال التي تُطبع على الفواتير الضريبية وتذييل إيصال العميل.'
+                  : 'Manage return & exchange policies printed on tax invoices and customer receipt footers.'}
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Quick Policy Presets */}
+          <div className="mb-6 bg-emerald-50/70 border border-emerald-200/80 p-4 rounded-2xl">
+            <label className="block text-xs font-black text-emerald-900 mb-2.5 flex items-center gap-1.5">
+              <span>⚡</span>
+              <span>{isAr ? 'قوالب سياسة الاسترجاع السريعة (اضغط للتطبيق المباشر):' : 'Quick Policy Templates (Click to Apply):'}</span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleChange('defaultReturnPolicyAr', 'البضاعة المباعة ترد وتستبدل خلال 7 أيام بشرط سلامة المنتج ووجود أصل الفاتورة.');
+                  handleChange('defaultReturnPolicyEn', 'Returns and exchanges accepted within 7 days with original receipt and intact condition.');
+                }}
+                className="px-3 py-1.5 bg-white hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-300 rounded-xl text-xs font-bold transition shadow-sm"
+              >
+                {isAr ? '🔄 استرجاع واستبدال 7 أيام' : '🔄 7 Days Return & Exchange'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleChange('defaultReturnPolicyAr', 'استبدال فقط خلال 14 يوماً من تاريخ الشراء بأصل الفاتورة ولا يوجد استرجاع نقدي.');
+                  handleChange('defaultReturnPolicyEn', 'Exchange only within 14 days of purchase with original receipt. No cash refunds.');
+                }}
+                className="px-3 py-1.5 bg-white hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-300 rounded-xl text-xs font-bold transition shadow-sm"
+              >
+                {isAr ? '🔀 استبدال فقط (14 يوم)' : '🔀 Exchange Only (14 Days)'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleChange('defaultReturnPolicyAr', 'الأصناف الاستهلاكية والغذائية والإلكترونيات المفتوحة غير قابلة للاسترجاع أو الاستبدال حسب تعليمات وزارة التجارة.');
+                  handleChange('defaultReturnPolicyEn', 'Consumables, food, and opened electronics cannot be returned or exchanged as per ministry guidelines.');
+                }}
+                className="px-3 py-1.5 bg-white hover:bg-emerald-600 text-emerald-800 hover:text-white border border-emerald-300 rounded-xl text-xs font-bold transition shadow-sm"
+              >
+                {isAr ? '🚫 غير قابل للاسترجاع (استهلاكي/مفتوح)' : '🚫 No Returns (Consumables/Opened)'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                {isAr ? 'سياسة الاسترجاع المعتمدة على الفواتير (عربي):' : 'Official Return Policy on Invoices (Arabic):'}
+              </label>
+              <textarea
+                rows={3}
+                value={formData.defaultReturnPolicyAr || ''}
+                onChange={(e) => handleChange('defaultReturnPolicyAr', e.target.value)}
+                placeholder="مثال: البضاعة المباعة ترد وتستبدل خلال 7 أيام بشرط سلامة المنتج ووجود أصل الفاتورة."
+                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-[inset_1px_1px_3px_#d1d9e6,inset_-1px_-1px_3px_#ffffff] font-medium"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                {isAr ? 'سياسة الاسترجاع المعتمدة (إنجليزي):' : 'Official Return Policy on Invoices (English):'}
+              </label>
+              <textarea
+                rows={3}
+                value={formData.defaultReturnPolicyEn || ''}
+                onChange={(e) => handleChange('defaultReturnPolicyEn', e.target.value)}
+                placeholder="e.g. Returns and exchanges accepted within 7 days with original receipt."
+                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-[inset_1px_1px_3px_#d1d9e6,inset_-1px_-1px_3px_#ffffff] font-medium"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-200/80 pt-6">
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 {isAr ? 'نص التذييل باللغة العربية (Receipt Footer - Arabic):' : 'Receipt Footer (Arabic):'}
               </label>
               <textarea
-                rows={3}
+                rows={2}
                 value={formData.receiptFooterAr}
                 onChange={(e) => handleChange('receiptFooterAr', e.target.value)}
-                placeholder="مثال: شكراً لتسوقكم معنا! البضاعة المباعة ترد وتستبدل خلال 7 أيام بأصل الفاتورة."
-                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-[inset_1px_1px_3px_#d1d9e6,inset_-1px_-1px_3px_#ffffff]"
+                placeholder="مثال: شكراً لتسوقكم معنا! نتمنى لكم يوماً سعيداً."
+                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-[inset_1px_1px_3px_#d1d9e6,inset_-1px_-1px_3px_#ffffff]"
               />
             </div>
 
@@ -492,11 +831,11 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
                 {isAr ? 'نص التذييل باللغة الإنجليزية (Receipt Footer - English):' : 'Receipt Footer (English):'}
               </label>
               <textarea
-                rows={3}
+                rows={2}
                 value={formData.receiptFooterEn}
                 onChange={(e) => handleChange('receiptFooterEn', e.target.value)}
-                placeholder="e.g. Thank you for shopping with us! Returns accepted within 7 days with original receipt."
-                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-[inset_1px_1px_3px_#d1d9e6,inset_-1px_-1px_3px_#ffffff]"
+                placeholder="e.g. Thank you for shopping with us! Have a wonderful day."
+                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-[inset_1px_1px_3px_#d1d9e6,inset_-1px_-1px_3px_#ffffff]"
               />
             </div>
           </div>
@@ -595,8 +934,8 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
               </h2>
               <p className="text-xs text-slate-500">
                 {isAr
-                  ? 'ضبط التأثيرات الصوتية واختيارات التشغيل في واجهة الكاشير.'
-                  : 'Configure sound effects and POS interface preferences.'}
+                  ? 'ضبط التأثيرات الصوتية واختيار طابعة الإيصالات الافتراضية للكاشير.'
+                  : 'Configure sound effects and default POS receipt printer preferences.'}
               </p>
             </div>
           </div>
@@ -631,6 +970,122 @@ export const StoreSettingsView: React.FC<StoreSettingsViewProps> = ({
             >
               {formData.enableSoundEffects ? (isAr ? 'مفعل 🔊' : 'Enabled 🔊') : (isAr ? 'معطل 🔇' : 'Disabled 🔇')}
             </button>
+          </div>
+
+          {/* Default Receipt Printer Selector Card */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200 gap-4 mt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+                <Printer className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-bold text-sm text-slate-800">
+                    {isAr ? 'طابعة إيصالات الكاشير الافتراضية (Receipt Printer)' : 'Default Receipt Printer'}
+                  </h4>
+                  <span className="px-2.5 py-0.5 rounded-md bg-indigo-100 border border-indigo-200 text-indigo-800 font-mono text-xs font-black">
+                    {formData.defaultPrinter && formData.defaultPrinter !== 'default' 
+                      ? formData.defaultPrinter 
+                      : (isAr ? '🖨️ طابعة الويندوز القياسية (System Default)' : '🖨️ System Default (Window Print)')}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {isAr
+                    ? 'اختيار الطابعة الحرارية الافتراضية لإصدار إيصالات البيع عبر واجهة Electron webContents.getPrinters.'
+                    : 'Select default hardware receipt printer via Electron webContents.getPrinters API.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                fetchPrinters();
+                setIsPrinterModalOpen(true);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-500/20 transition shrink-0 flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
+            >
+              <Printer className="w-4 h-4" />
+              <span>{isAr ? '⚙️ اختيار وتخصيص الطابعة' : '⚙️ Select Printer'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* SECTION 6: SYSTEM BACKUP & RESTORE */}
+        <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-white/80 shadow-[8px_8px_16px_#d1d9e6,-8px_-8px_16px_#ffffff] transition hover:shadow-[10px_10px_20px_#cbd3e0,-10px_-10px_20px_#ffffff]">
+          <div className="flex items-center gap-3 pb-5 border-b border-slate-200/80 mb-6">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shadow-sm">
+              <Database className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-800">
+                {isAr ? '6. إدارة النسخ الاحتياطي واستعادة البيانات' : '6. System Data Backup & Restore'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {isAr
+                  ? 'تصدير وتحميل نسخة كاملة من جميع بيانات المتجر (المنتجات، الفواتير، العملاء) في ملف JSON أو استعادتها بضغطة واحدة.'
+                  : 'Export a complete JSON backup of all products, sales invoices, and customer accounts or restore from file.'}
+              </p>
+            </div>
+          </div>
+
+          {backupMessage && (
+            <div className="mb-6 p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+              <span>{backupMessage}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Export Card */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2 text-slate-800 font-extrabold text-sm">
+                  <Download className="w-5 h-5 text-indigo-600" />
+                  <span>{isAr ? 'تصدير نسخة احتياطية كاملة' : 'Export Full Database Backup'}</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {isAr ? 'قم بتحميل ملف JSON يحتوي على المخزون بالكامل، قائمة العملاء، أرصدتهم، ونقاط الولاء، وسجل الفواتير لحفظه في حاسوبك أو فلاشة.' : 'Download a full JSON archive containing all inventory items, customer balances, loyalty points, and sales history.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isExporting}
+                onClick={handleExportBackup}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs shadow-md shadow-indigo-500/20 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                <span>{isExporting ? (isAr ? 'جاري التصدير...' : 'Exporting...') : (isAr ? '📥 تحميل النسخة الاحتياطية الآن' : '📥 Download Backup File')}</span>
+              </button>
+            </div>
+
+            {/* Import Card */}
+            <div className="p-5 rounded-2xl bg-amber-50/40 border border-amber-200 flex flex-col justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2 text-slate-800 font-extrabold text-sm">
+                  <Upload className="w-5 h-5 text-amber-600" />
+                  <span>{isAr ? 'استعادة البيانات من ملف سابق' : 'Restore Database from Backup File'}</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  {isAr ? 'اختر ملف النسخة الاحتياطية (JSON) الذي قمت بتنزيله سابقاً لاستعادة المخزون والفواتير والعملاء إلى النظام فورا.' : 'Select a previously saved JSON backup file to restore all store inventory, customers, and invoice records.'}
+                </p>
+              </div>
+              <div>
+                <label className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer text-center">
+                  <Upload className="w-4 h-4" />
+                  <span>{isImporting ? (isAr ? 'جاري استعادة البيانات...' : 'Restoring Data...') : (isAr ? '📂 اختيار ملف النسخة والاستعادة' : '📂 Select & Restore Backup')}</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportBackup}
+                    disabled={isImporting || userRole !== 'admin'}
+                    className="hidden"
+                  />
+                </label>
+                {userRole !== 'admin' && (
+                  <p className="text-[10px] text-rose-500 font-bold mt-1 text-center">{isAr ? '⚠️ استعادة البيانات مخصصة للمدير فقط' : '⚠️ Restore is restricted to Admin only'}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

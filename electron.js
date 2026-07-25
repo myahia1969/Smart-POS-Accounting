@@ -394,3 +394,58 @@ ipcMain.handle('app:open-data-dir', () => {
   shell.openPath(USER_DATA_PATH);
   return true;
 });
+
+ipcMain.handle('app:get-printers', async (event) => {
+  try {
+    const wc = event.sender || (mainWindow && mainWindow.webContents);
+    if (wc) {
+      if (typeof wc.getPrintersAsync === 'function') {
+        const printers = await wc.getPrintersAsync();
+        logElectron('INFO', `Fetched ${printers.length} printers via getPrintersAsync`);
+        return printers;
+      } else if (typeof wc.getPrinters === 'function') {
+        const printers = wc.getPrinters();
+        logElectron('INFO', `Fetched ${printers.length} printers via getPrinters`);
+        return printers;
+      }
+    }
+    return [];
+  } catch (err) {
+    logElectron('ERROR', 'Failed to get printers:', err);
+    return [];
+  }
+});
+
+ipcMain.handle('app:print-receipt', async (event, { html, printerName }) => {
+  try {
+    logElectron('INFO', `Printing receipt to printer: ${printerName || 'default OS printer'}`);
+    const printWin = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+    
+    await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+    
+    const printOptions = {
+      silent: !!printerName && printerName !== 'default',
+      printBackground: true,
+      deviceName: (printerName && printerName !== 'default') ? printerName : undefined
+    };
+
+    return new Promise((resolve) => {
+      printWin.webContents.print(printOptions, (success, failureReason) => {
+        if (!success) logElectron('WARN', `Print failed: ${failureReason}`);
+        else logElectron('INFO', 'Receipt printed successfully via Electron IPC');
+        if (!printWin.isDestroyed()) printWin.close();
+        resolve(success);
+      });
+    });
+  } catch (err) {
+    logElectron('ERROR', 'Exception during app:print-receipt:', err);
+    return false;
+  }
+});
+

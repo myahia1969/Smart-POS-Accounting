@@ -115,6 +115,7 @@ const DEFAULT_DB: AppDatabase = {
   products: [
     {
       id: 'prod-1',
+      sku: 'COF-COL-01',
       nameAr: 'قهوة مختصة كولومبيا سوبريمو (250 جم)',
       nameEn: 'Specialty Coffee Colombia Supremo (250g)',
       barcode: '628100123401',
@@ -128,6 +129,7 @@ const DEFAULT_DB: AppDatabase = {
     },
     {
       id: 'prod-2',
+      sku: 'TEA-GRN-02',
       nameAr: 'شاي أخضر عضوي فاخر (علبة 50 كيس)',
       nameEn: 'Premium Organic Green Tea (50 Bags)',
       barcode: '628100123402',
@@ -141,6 +143,7 @@ const DEFAULT_DB: AppDatabase = {
     },
     {
       id: 'prod-3',
+      sku: 'CHO-DRK-03',
       nameAr: 'شوكولاتة داكنة 85% كاكاو بلجيكي',
       nameEn: 'Belgian Dark Chocolate 85% Cocoa',
       barcode: '628100123403',
@@ -154,6 +157,7 @@ const DEFAULT_DB: AppDatabase = {
     },
     {
       id: 'prod-4',
+      sku: 'OIL-OLV-04',
       nameAr: 'زيت زيتون بكر ممتاز عصرة أولى (1 لتر)',
       nameEn: 'Extra Virgin Olive Oil First Cold Press (1L)',
       barcode: '628100123404',
@@ -167,6 +171,7 @@ const DEFAULT_DB: AppDatabase = {
     },
     {
       id: 'prod-5',
+      sku: 'HNY-SDR-05',
       nameAr: 'عسل سدر طبيعي ممتاز (500 جم)',
       nameEn: 'Natural Sidr Honey Premium (500g)',
       barcode: '628100123405',
@@ -180,6 +185,7 @@ const DEFAULT_DB: AppDatabase = {
     },
     {
       id: 'prod-6',
+      sku: 'NUT-MIX-06',
       nameAr: 'مكسرات مشكلة محمصة فاخرة (كيلو)',
       nameEn: 'Roasted Mixed Nuts Premium (1 kg)',
       barcode: '628100123406',
@@ -550,6 +556,8 @@ app.get('/api/db', (req: Request, res: Response) => {
 
 app.post('/api/backup/export', (req: Request, res: Response) => {
   logToFile('INFO', 'Exporting full database backup payload');
+  db.settings.lastBackupDate = new Date().toISOString();
+  saveDatabase(db);
   res.header('Content-Type', 'application/json');
   res.header('Content-Disposition', `attachment; filename="SmartPOS_Backup_${new Date().toISOString().slice(0, 10)}.json"`);
   res.send(JSON.stringify(db, null, 2));
@@ -590,6 +598,9 @@ app.post('/api/products', (req: Request, res: Response) => {
     if (existingBarcode) {
       return res.status(400).json({ error: 'الباركود مسجل بالفعل لصنف آخر في المخزون!' });
     }
+    if (prod.sku && db.products.some(p => p.sku && p.sku.toLowerCase() === prod.sku!.toLowerCase())) {
+      return res.status(400).json({ error: 'رمز الصنف الداخلي (SKU) مسجل بالفعل لصنف آخر في المخزون!' });
+    }
     db.products.push(prod);
   }
   saveDatabase(db);
@@ -629,6 +640,27 @@ app.delete('/api/customers/:id', (req: Request, res: Response) => {
   db.customers = db.customers.filter(c => c.id !== id);
   saveDatabase(db);
   res.json({ success: true });
+});
+
+app.put('/api/customers/:id/loyalty', (req: Request, res: Response) => {
+  try {
+    const { points, action } = req.body; // action: 'add' | 'deduct' | 'set'
+    const index = db.customers.findIndex(c => c.id === req.params.id);
+    if (index < 0) return res.status(404).json({ error: 'Customer not found' });
+    const current = db.customers[index].loyaltyPoints || 0;
+    if (action === 'add') {
+      db.customers[index].loyaltyPoints = current + Number(points);
+      db.customers[index].totalPointsEarned = (db.customers[index].totalPointsEarned || 0) + Number(points);
+    } else if (action === 'deduct') {
+      db.customers[index].loyaltyPoints = Math.max(0, current - Number(points));
+    } else {
+      db.customers[index].loyaltyPoints = Math.max(0, Number(points));
+    }
+    saveDatabase(db);
+    res.json({ success: true, customer: db.customers[index] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // --- Suppliers API ---
@@ -684,20 +716,29 @@ app.post('/api/sales', (req: Request, res: Response) => {
 
     // 1. Decrement product stocks automatically
     for (const item of invoice.items) {
-      const prodIndex = db.products.findIndex(p => p.id === item.productId || p.barcode === item.barcode);
+      const prodIndex = db.products.findIndex(p => p.id === item.productId || p.barcode === item.barcode || (p.sku && p.sku === item.barcode));
       if (prodIndex >= 0) {
         db.products[prodIndex].stock = Math.max(0, db.products[prodIndex].stock - item.quantity);
         db.products[prodIndex].updatedAt = new Date().toISOString();
       }
     }
 
-    // 2. Update customer balance & purchase history if customer assigned
+    // 2. Update customer balance, purchase history, & loyalty points if customer assigned
     if (invoice.customerId) {
       const custIndex = db.customers.findIndex(c => c.id === invoice.customerId);
       if (custIndex >= 0) {
         db.customers[custIndex].totalPurchases += invoice.grandTotal;
         if (invoice.paymentMethod === 'credit') {
           db.customers[custIndex].balance += invoice.grandTotal;
+        }
+        if (db.settings.loyaltyEnabled !== false) {
+          const earnRate = db.settings.loyaltyEarnRate || 10;
+          const earned = invoice.loyaltyPointsEarned !== undefined ? invoice.loyaltyPointsEarned : Math.floor(invoice.grandTotal / earnRate);
+          invoice.loyaltyPointsEarned = earned;
+          const redeemed = invoice.loyaltyPointsRedeemed || 0;
+          const currentPts = db.customers[custIndex].loyaltyPoints || 0;
+          db.customers[custIndex].loyaltyPoints = Math.max(0, currentPts - redeemed + earned);
+          db.customers[custIndex].totalPointsEarned = (db.customers[custIndex].totalPointsEarned || 0) + earned;
         }
       }
     }
@@ -715,8 +756,8 @@ app.post('/api/sales', (req: Request, res: Response) => {
 app.put('/api/sales/:id', (req: Request, res: Response) => {
   try {
     const saleId = req.params.id;
-    const { status, cancelledReason, cancelledBy, returnPolicyText, notes } = req.body;
-    const invoiceIndex = db.sales.findIndex(s => s.id === saleId);
+    const { status, cancelledReason, cancelledBy, returnPolicyText, notes, refundedAmount, refundedItems } = req.body;
+    const invoiceIndex = db.sales.findIndex(s => s.id === saleId || s.invoiceNumber === saleId || String(s.id) === String(saleId));
     if (invoiceIndex < 0) {
       return res.status(404).json({ error: 'الفاتورة غير موجودة' });
     }
@@ -724,10 +765,10 @@ app.put('/api/sales/:id', (req: Request, res: Response) => {
     const oldInvoice = db.sales[invoiceIndex];
     const oldStatus = oldInvoice.status;
 
-    // If changing from completed to cancelled or refunded, restore stock quantities
-    if (oldStatus === 'completed' && (status === 'cancelled' || status === 'refunded')) {
+    // If changing from completed or partial_refund to cancelled or refunded, restore stock quantities
+    if ((oldStatus === 'completed' || oldStatus === 'partial_refund') && (status === 'cancelled' || status === 'refunded')) {
       for (const item of oldInvoice.items) {
-        const prodIndex = db.products.findIndex(p => p.id === item.productId || p.barcode === item.barcode);
+        const prodIndex = db.products.findIndex(p => p.id === item.productId || p.barcode === item.barcode || (p.sku && p.sku === item.barcode));
         if (prodIndex >= 0) {
           db.products[prodIndex].stock += item.quantity;
           db.products[prodIndex].updatedAt = new Date().toISOString();
@@ -741,6 +782,31 @@ app.put('/api/sales/:id', (req: Request, res: Response) => {
           db.customers[custIndex].totalPurchases = Math.max(0, db.customers[custIndex].totalPurchases - oldInvoice.grandTotal);
         }
       }
+      // Reverse loyalty points
+      if (oldInvoice.customerId && (oldInvoice.loyaltyPointsEarned || oldInvoice.loyaltyPointsRedeemed)) {
+        const custIndex = db.customers.findIndex(c => c.id === oldInvoice.customerId);
+        if (custIndex >= 0) {
+          const earned = oldInvoice.loyaltyPointsEarned || 0;
+          const redeemed = oldInvoice.loyaltyPointsRedeemed || 0;
+          db.customers[custIndex].loyaltyPoints = Math.max(0, (db.customers[custIndex].loyaltyPoints || 0) - earned + redeemed);
+        }
+      }
+    } else if (status === 'partial_refund' && Array.isArray(refundedItems)) {
+      // Partial item refund: restore ONLY the returned quantities
+      for (const rItem of refundedItems) {
+        const prodIndex = db.products.findIndex(p => p.id === rItem.productId || p.barcode === rItem.barcode || (p.sku && p.sku === rItem.barcode));
+        if (prodIndex >= 0) {
+          db.products[prodIndex].stock += rItem.quantity;
+          db.products[prodIndex].updatedAt = new Date().toISOString();
+        }
+      }
+      if (oldInvoice.customerId && oldInvoice.paymentMethod === 'credit' && refundedAmount) {
+        const custIndex = db.customers.findIndex(c => c.id === oldInvoice.customerId);
+        if (custIndex >= 0) {
+          db.customers[custIndex].balance = Math.max(0, db.customers[custIndex].balance - refundedAmount);
+          db.customers[custIndex].totalPurchases = Math.max(0, db.customers[custIndex].totalPurchases - refundedAmount);
+        }
+      }
     }
 
     if (status) db.sales[invoiceIndex].status = status;
@@ -748,7 +814,9 @@ app.put('/api/sales/:id', (req: Request, res: Response) => {
     if (cancelledBy !== undefined) db.sales[invoiceIndex].cancelledBy = cancelledBy;
     if (returnPolicyText !== undefined) db.sales[invoiceIndex].returnPolicyText = returnPolicyText;
     if (notes !== undefined) db.sales[invoiceIndex].notes = notes;
-    if (status === 'cancelled' || status === 'refunded') {
+    if (refundedAmount !== undefined) db.sales[invoiceIndex].refundedAmount = refundedAmount;
+    if (refundedItems !== undefined) db.sales[invoiceIndex].refundedItems = refundedItems;
+    if (status === 'cancelled' || status === 'refunded' || status === 'partial_refund') {
       db.sales[invoiceIndex].cancelledAt = new Date().toISOString();
     }
 
@@ -895,7 +963,7 @@ app.get('/api/summary', (req: Request, res: Response) => {
   for (const s of db.sales) {
     if (s.status !== 'completed') continue;
     for (const item of s.items) {
-      const p = db.products.find(x => x.id === item.productId || x.barcode === item.barcode);
+      const p = db.products.find(x => x.id === item.productId || x.barcode === item.barcode || (x.sku && x.sku === item.barcode));
       const cat = p ? p.category : 'عام';
       if (!catMap[cat]) catMap[cat] = { value: 0, count: 0 };
       catMap[cat].value += item.total;

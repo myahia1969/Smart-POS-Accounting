@@ -48,11 +48,25 @@ export const DesktopGuideView: React.FC<DesktopGuideViewProps> = ({
       descEn: 'Runs both dev server and Electron desktop window concurrently.'
     },
     {
-      titleAr: '4. حزم وتجميع ملف ويندوز التنفيذي المستقل (Build Windows Portable EXE x64)',
-      titleEn: '4. Build Windows Portable x64 EXE',
-      cmd: 'npm run dist-x64',
-      descAr: 'يقوم بعمل vite build للواجهة، وحزم server.ts عبر esbuild لإنتاج dist/server.cjs، ثم تشغيل electron-builder لاستخراج ملف EXE مستقل داخل مجلد release/.',
-      descEn: 'Builds React frontend, bundles server.ts via esbuild to dist/server.cjs, and runs electron-builder to output portable EXE in release/ folder.'
+      titleAr: '4. حزم وتجميع ملفات ويندوز الكاملة (Setup Installer EXE + Portable EXE x64)',
+      titleEn: '4. Build All Windows EXEs (Setup Installer + Portable x64)',
+      cmd: 'npm run dist',
+      descAr: 'يقوم بعمل vite build للواجهة، وحزم server.ts عبر esbuild لإنتاج dist/server.cjs، ثم تشغيل electron-builder لاستخراج ملف التثبيت Setup EXE والملف المحمول Portable EXE معاً في مجلد release/.',
+      descEn: 'Builds React frontend, bundles server.ts via esbuild to dist/server.cjs, and runs electron-builder to output BOTH Setup installer and Portable EXE in release/ folder.'
+    },
+    {
+      titleAr: '5. إنشاء ملف التثبيت الرسمي فقط (Setup Installer EXE - NSIS)',
+      titleEn: '5. Build Windows Setup Installer Only (NSIS EXE)',
+      cmd: 'npm run dist:setup',
+      descAr: 'ينتج ملف تثبيت ويندوز رسمي (SmartPOS_Accounting-Setup-1.0.0.exe) مع إنشاء اختصار على سطح المكتب وقائمة ابدأ وتحديد مسار التثبيت.',
+      descEn: 'Outputs a Windows installer executable with start menu and desktop shortcuts.'
+    },
+    {
+      titleAr: '6. إنشاء الملف المحمول المستقل فقط (Windows Portable EXE x64)',
+      titleEn: '6. Build Windows Portable EXE Only',
+      cmd: 'npm run dist:portable',
+      descAr: 'ينتج ملف مستقل (SmartPOS_Accounting-Portable-1.0.0.exe) يعمل مباشرة من الفلاشة USB أو سطح المكتب بدون الحاجة لتثبيت.',
+      descEn: 'Outputs a standalone executable that runs directly from USB or hard drive without installation.'
     }
   ];
 

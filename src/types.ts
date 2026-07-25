@@ -9,6 +9,7 @@ export type PaymentMethod = 'cash' | 'card' | 'credit' | 'split';
 
 export interface Product {
   id: string;
+  sku?: string; // Internal Stock Keeping Unit (SKU)
   nameAr: string;
   nameEn: string;
   barcode: string;
@@ -38,6 +39,8 @@ export interface Customer {
   balance: number; // positive = owes us money (receivable), negative = advance
   creditLimit: number;
   totalPurchases: number;
+  loyaltyPoints?: number; // Current loyalty points available to redeem
+  totalPointsEarned?: number; // Lifetime loyalty points accumulated
   notes?: string;
   createdAt: string;
 }
@@ -77,6 +80,7 @@ export interface SaleInvoice {
   paymentMethod: PaymentMethod;
   customerId?: string;
   customerName?: string;
+  customerEmail?: string;
   cashReceived?: number;
   changeGiven?: number;
   cashierName: string;
@@ -85,7 +89,12 @@ export interface SaleInvoice {
   cancelledReason?: string; // Reason for invoice cancellation / void
   cancelledAt?: string; // Timestamp of cancellation
   cancelledBy?: string; // Who cancelled it
-  status: 'completed' | 'refunded' | 'pending' | 'cancelled';
+  status: 'completed' | 'refunded' | 'pending' | 'cancelled' | 'partial_refund';
+  refundedAmount?: number; // Total amount refunded in partial refund
+  refundedItems?: { productId: string; barcode: string; productNameAr: string; productNameEn: string; quantity: number; refundPrice: number; }[];
+  loyaltyPointsEarned?: number; // Points earned on this invoice
+  loyaltyPointsRedeemed?: number; // Points redeemed for discount
+  loyaltyDiscountAmount?: number; // Value of discount from loyalty points
 }
 
 export interface Expense {
@@ -169,6 +178,11 @@ export interface SystemSettings {
   language: Language;
   adminPin?: string; // Admin password/PIN for manager access
   customCategories?: string[]; // Custom product categories with emojis/icons e.g. ["🧼 مواد تنظيف", "🍔 مأكولات"]
+  loyaltyEnabled?: boolean; // Enable loyalty points
+  loyaltyEarnRate?: number; // e.g. 1 point for every 10 SAR spent
+  loyaltyRedeemRate?: number; // e.g. 10 SAR discount for every 100 points
+  lastBackupDate?: string; // Last data backup timestamp
+  defaultPrinter?: string; // Default receipt printer selected via Electron webContents.getPrinters API
 }
 
 export interface AppDatabase {

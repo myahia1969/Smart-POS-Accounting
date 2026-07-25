@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { X, Check, Sparkles, Plus, Layers } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Language } from '../types';
 
 interface CategoryIconModalProps {
@@ -69,8 +70,6 @@ export const CategoryIconModal: React.FC<CategoryIconModalProps> = ({
   const [categoryName, setCategoryName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  if (!isOpen) return null;
-
   const handleSelectPreset = (preset: typeof ICONS_GRID[0]) => {
     setSelectedEmoji(preset.emoji);
     if (!categoryName.trim()) {
@@ -104,9 +103,23 @@ export const CategoryIconModal: React.FC<CategoryIconModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.92, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 15 }}
+            transition={{ type: 'spring', duration: 0.35, bounce: 0.15 }}
+            className="bg-white/95 backdrop-blur-xl border border-white rounded-3xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-5 max-h-[90vh] overflow-y-auto"
+          >
+            {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 bg-gradient-to-tr from-indigo-500 to-purple-600 text-white rounded-2xl shadow-md shadow-indigo-500/20">
@@ -216,7 +229,9 @@ export const CategoryIconModal: React.FC<CategoryIconModalProps> = ({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
