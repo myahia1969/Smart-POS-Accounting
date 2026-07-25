@@ -1,0 +1,383 @@
+{
+  "products": [
+    {
+      "id": "prod-2",
+      "nameAr": "شاي أخضر عضوي فاخر (علبة 50 كيس)",
+      "nameEn": "Premium Organic Green Tea (50 Bags)",
+      "barcode": "628100123402",
+      "category": "مشروبات وقهوة",
+      "costPrice": 12,
+      "sellingPrice": 22,
+      "stock": 48,
+      "minStock": 8,
+      "unit": "piece",
+      "updatedAt": "2026-07-25T05:47:42.808Z"
+    },
+    {
+      "id": "prod-3",
+      "nameAr": "شوكولاتة داكنة 85% كاكاو بلجيكي",
+      "nameEn": "Belgian Dark Chocolate 85% Cocoa",
+      "barcode": "628100123403",
+      "category": "حلويات وسناكس",
+      "costPrice": 8,
+      "sellingPrice": 16,
+      "stock": 16,
+      "minStock": 15,
+      "unit": "piece",
+      "updatedAt": "2026-07-25T07:46:19.589Z"
+    },
+    {
+      "id": "prod-4",
+      "nameAr": "زيت زيتون بكر ممتاز عصرة أولى (1 لتر)",
+      "nameEn": "Extra Virgin Olive Oil First Cold Press (1L)",
+      "barcode": "628100123404",
+      "category": "مواد غذائية",
+      "costPrice": 35,
+      "sellingPrice": 65,
+      "stock": 18,
+      "minStock": 5,
+      "unit": "piece",
+      "updatedAt": "2026-07-25T08:13:09.369Z"
+    },
+    {
+      "id": "prod-5",
+      "nameAr": "عسل سدر طبيعي ممتاز (500 جم)",
+      "nameEn": "Natural Sidr Honey Premium (500g)",
+      "barcode": "628100123405",
+      "category": "مواد غذائية",
+      "costPrice": 60,
+      "sellingPrice": 110,
+      "stock": 12,
+      "minStock": 5,
+      "unit": "piece",
+      "updatedAt": "2026-07-25T05:47:42.808Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust-1",
+      "name": "عميل نقدي عام (General Customer)",
+      "phone": "0000000000",
+      "balance": 0,
+      "creditLimit": 0,
+      "totalPurchases": 1924.75,
+      "notes": "العميل الافتراضي للمبيعات السريعة",
+      "createdAt": "2026-07-25T05:47:42.808Z"
+    },
+    {
+      "id": "cust-2",
+      "name": "مهندس أحمد عبد العزيز",
+      "phone": "0501112233",
+      "email": "ahmed@example.com",
+      "balance": 150,
+      "creditLimit": 2000,
+      "totalPurchases": 4200,
+      "notes": "عميل دائم، يفضل الدفع بالآجل أحياناً",
+      "createdAt": "2026-07-25T05:47:42.808Z"
+    },
+    {
+      "id": "cust-3",
+      "name": "شركة الأفق التجارية",
+      "phone": "0554445566",
+      "email": "info@horizon.com",
+      "balance": 0,
+      "creditLimit": 10000,
+      "totalPurchases": 15400,
+      "notes": "خصم تجاري خاص 5%",
+      "createdAt": "2026-07-25T05:47:42.808Z"
+    }
+  ],
+  "suppliers": [
+    {
+      "id": "supp-1",
+      "name": "شركة البن العالمية للاستيراد",
+      "phone": "0112223344",
+      "companyName": "Global Coffee Imports Co.",
+      "balance": 1200,
+      "suppliedCategories": [
+        "مشروبات وقهوة"
+      ],
+      "notes": "توريد شهري ثابت للقهوة والشاي",
+      "createdAt": "2026-07-25T05:47:42.808Z"
+    },
+    {
+      "id": "supp-2",
+      "name": "مؤسسة الخير للمواد الغذائية",
+      "phone": "0115556677",
+      "companyName": "Al-Khair Foodstuff Est.",
+      "balance": 0,
+      "suppliedCategories": [
+        "مواد غذائية",
+        "مكسرات وتمور"
+      ],
+      "notes": "التوريد بالدفع الفوري فقط",
+      "createdAt": "2026-07-25T05:47:42.808Z"
+    }
+  ],
+  "sales": [
+    {
+      "id": "sale-1784967189108",
+      "invoiceNumber": "INV-2026-5212",
+      "date": "2026-07-25T08:13:09.108Z",
+      "items": [
+        {
+          "productId": "prod-4",
+          "productNameAr": "زيت زيتون بكر ممتاز عصرة أولى (1 لتر)",
+          "productNameEn": "Extra Virgin Olive Oil First Cold Press (1L)",
+          "barcode": "628100123404",
+          "costPrice": 35,
+          "unitPrice": 65,
+          "quantity": 1,
+          "discount": 0,
+          "total": 65,
+          "returnPolicy": "7_days"
+        }
+      ],
+      "subtotal": 65,
+      "discountTotal": 100,
+      "taxRate": 15,
+      "taxAmount": 0,
+      "grandTotal": 0,
+      "paymentMethod": "cash",
+      "customerId": "cust-1",
+      "customerName": "عميل نقدي عام (General Customer)",
+      "cashReceived": 100,
+      "changeGiven": 100,
+      "cashierName": "الكاشير المعتمد (الوردية الأولى)",
+      "returnPolicyText": "البضاعة المباعة ترد وتستبدل خلال 7 أيام بشرط سلامة المنتج ووجود أصل الفاتورة. (الأصناف الغذائية والاستهلاكية غير قابلة للاسترجاع)",
+      "status": "completed"
+    },
+    {
+      "id": "sale-1784967129176",
+      "invoiceNumber": "INV-2026-8026",
+      "date": "2026-07-25T08:12:09.176Z",
+      "items": [
+        {
+          "productId": "prod-4",
+          "productNameAr": "زيت زيتون بكر ممتاز عصرة أولى (1 لتر)",
+          "productNameEn": "Extra Virgin Olive Oil First Cold Press (1L)",
+          "barcode": "628100123404",
+          "costPrice": 35,
+          "unitPrice": 65,
+          "quantity": 1,
+          "discount": 0,
+          "total": 65,
+          "returnPolicy": "7_days"
+        }
+      ],
+      "subtotal": 65,
+      "discountTotal": 0,
+      "taxRate": 15,
+      "taxAmount": 9.75,
+      "grandTotal": 74.75,
+      "paymentMethod": "cash",
+      "customerId": "cust-1",
+      "customerName": "عميل نقدي عام (General Customer)",
+      "cashReceived": 74.75,
+      "changeGiven": 0,
+      "cashierName": "الكاشير المعتمد (الوردية الأولى)",
+      "returnPolicyText": "البضاعة المباعة ترد وتستبدل خلال 7 أيام بشرط سلامة المنتج ووجود أصل الفاتورة. (الأصناف الغذائية والاستهلاكية غير قابلة للاسترجاع)",
+      "status": "completed"
+    },
+    {
+      "id": "sale-101",
+      "invoiceNumber": "INV-2026-0001",
+      "date": "2026-07-23T05:47:42.808Z",
+      "items": [
+        {
+          "productId": "prod-1",
+          "productNameAr": "قهوة مختصة كولومبيا سوبريمو (250 جم)",
+          "productNameEn": "Specialty Coffee Colombia Supremo",
+          "barcode": "628100123401",
+          "costPrice": 24,
+          "unitPrice": 45,
+          "quantity": 2,
+          "discount": 0,
+          "total": 90
+        },
+        {
+          "productId": "prod-3",
+          "productNameAr": "شوكولاتة داكنة 85% كاكاو بلجيكي",
+          "productNameEn": "Belgian Dark Chocolate 85%",
+          "barcode": "628100123403",
+          "costPrice": 8,
+          "unitPrice": 16,
+          "quantity": 3,
+          "discount": 0,
+          "total": 48
+        }
+      ],
+      "subtotal": 138,
+      "discountTotal": 0,
+      "taxRate": 15,
+      "taxAmount": 20.7,
+      "grandTotal": 158.7,
+      "paymentMethod": "card",
+      "customerId": "cust-1",
+      "customerName": "عميل نقدي عام (General Customer)",
+      "cashierName": "محمد (الكاشير)",
+      "status": "completed"
+    },
+    {
+      "id": "sale-102",
+      "invoiceNumber": "INV-2026-0002",
+      "date": "2026-07-24T05:47:42.808Z",
+      "items": [
+        {
+          "productId": "prod-4",
+          "productNameAr": "زيت زيتون بكر ممتاز عصرة أولى (1 لتر)",
+          "productNameEn": "Extra Virgin Olive Oil (1L)",
+          "barcode": "628100123404",
+          "costPrice": 35,
+          "unitPrice": 65,
+          "quantity": 2,
+          "discount": 10,
+          "total": 120
+        },
+        {
+          "productId": "prod-5",
+          "productNameAr": "عسل سدر طبيعي ممتاز (500 جم)",
+          "productNameEn": "Natural Sidr Honey Premium (500g)",
+          "barcode": "628100123405",
+          "costPrice": 60,
+          "unitPrice": 110,
+          "quantity": 1,
+          "discount": 0,
+          "total": 110
+        }
+      ],
+      "subtotal": 230,
+      "discountTotal": 10,
+      "taxRate": 15,
+      "taxAmount": 34.5,
+      "grandTotal": 264.5,
+      "paymentMethod": "cash",
+      "cashReceived": 300,
+      "changeGiven": 35.5,
+      "customerId": "cust-1",
+      "customerName": "عميل نقدي عام (General Customer)",
+      "cashierName": "محمد (الكاشير)",
+      "status": "completed"
+    },
+    {
+      "id": "sale-103",
+      "invoiceNumber": "INV-2026-0003",
+      "date": "2026-07-25T05:47:42.808Z",
+      "items": [
+        {
+          "productId": "prod-1",
+          "productNameAr": "قهوة مختصة كولومبيا سوبريمو (250 جم)",
+          "productNameEn": "Specialty Coffee Colombia Supremo",
+          "barcode": "628100123401",
+          "costPrice": 24,
+          "unitPrice": 45,
+          "quantity": 4,
+          "discount": 0,
+          "total": 180
+        },
+        {
+          "productId": "prod-6",
+          "productNameAr": "مكسرات مشكلة محمصة فاخرة (كيلو)",
+          "productNameEn": "Roasted Mixed Nuts Premium (1 kg)",
+          "barcode": "628100123406",
+          "costPrice": 45,
+          "unitPrice": 85,
+          "quantity": 1,
+          "discount": 0,
+          "total": 85
+        }
+      ],
+      "subtotal": 265,
+      "discountTotal": 0,
+      "taxRate": 15,
+      "taxAmount": 39.75,
+      "grandTotal": 304.75,
+      "paymentMethod": "credit",
+      "customerId": "cust-2",
+      "customerName": "مهندس أحمد عبد العزيز",
+      "cashierName": "سارة (مشرف عام)",
+      "notes": "تم تقييد المبلغ على حساب العميل بالآجل",
+      "status": "completed"
+    }
+  ],
+  "expenses": [
+    {
+      "id": "exp-1",
+      "title": "إيجار المحل الشهري (دفعة مقدمة)",
+      "category": "rent",
+      "amount": 1500,
+      "date": "2026-07-20T05:47:42.808Z",
+      "notes": "إيجار شهر يوليو 2026",
+      "receiptNumber": "RENT-701",
+      "loggedBy": "المدير العام"
+    },
+    {
+      "id": "exp-2",
+      "title": "فاتورة الكهرباء والماء",
+      "category": "utilities",
+      "amount": 380,
+      "date": "2026-07-23T05:47:42.808Z",
+      "notes": "فاتورة شهرية لعداد المحل",
+      "receiptNumber": "ELEC-988",
+      "loggedBy": "محمد (الكاشير)"
+    },
+    {
+      "id": "exp-3",
+      "title": "صيانة ماكينة التغليف والطباعة",
+      "category": "maintenance",
+      "amount": 150,
+      "date": "2026-07-25T05:47:42.808Z",
+      "notes": "تغيير حبر حراري وصيانة طابعة الفواتير",
+      "receiptNumber": "MAINT-104",
+      "loggedBy": "سارة (مشرف عام)"
+    }
+  ],
+  "insights": [
+    {
+      "id": "ins-1",
+      "createdAt": "2026-07-25T05:47:42.808Z",
+      "titleAr": "تحذير مخزون منخفض: الشوكولاتة الداكنة والمكسرات",
+      "titleEn": "Low Stock Warning: Dark Chocolate & Mixed Nuts",
+      "summaryAr": "يوجد 2 صنف وصلوا إلى حد الطلب الأدنى (أقل من 10 قطع). يُنصح بطلب توريد عاجل من الموردين لتجنب نفاذ الكمية وفقدان المبيعات.",
+      "summaryEn": "2 items have reached minimum stock threshold. Immediate supplier reorder is recommended to avoid stockout.",
+      "type": "stock_alert",
+      "priority": "high",
+      "actionableStepAr": "إنشاء طلب شراء لعدد 30 كرتونة شوكولاتة و 20 كيلو مكسرات من مؤسسة الخير.",
+      "actionableStepEn": "Create purchase order for 30 boxes of chocolate and 20 kg of nuts from Al-Khair Est."
+    },
+    {
+      "id": "ins-2",
+      "createdAt": "2026-07-24T05:47:42.808Z",
+      "titleAr": "فرصة لزيادة الأرباح في قسم القهوة المختصة",
+      "titleEn": "Profit Optimization Opportunity: Specialty Coffee",
+      "summaryAr": "تظهر البيانات أن القهوة المختصة هي الصنف الأعلى مبيعاً وأعلى هامش ربح (46.6%). يمكن زيادة الإيرادات بعرض حزم ترويجية مع العسل أو الشوكولاتة.",
+      "summaryEn": "Specialty coffee has the highest sales volume and margin (46.6%). Bundle promotions with honey or chocolate can boost average order value.",
+      "type": "profit_opportunity",
+      "priority": "medium",
+      "actionableStepAr": "إطلاق عرض \"باقة المزاج\": خصم 10% عند شراء قهوة مختصة + شوكولاتة بلجيكية.",
+      "actionableStepEn": "Launch \"Mood Bundle\": 10% discount when buying coffee + Belgian chocolate."
+    }
+  ],
+  "settings": {
+    "storeNameAr": "متجر الصفوة الذكي للمبيعات",
+    "storeNameEn": "Al-Safwa Smart POS Store",
+    "storeAddress": "الرياض، المملكة العربية السعودية - شارع الملك فهد",
+    "storePhone": "+966 50 123 4567",
+    "taxNumber": "301234567800003",
+    "defaultTaxRate": 15,
+    "currency": "SAR",
+    "receiptFooterAr": "شكراً لتسوقكم معنا! البضاعة المباعة ترد وتستبدل خلال 7 أيام بالفاتورة.",
+    "receiptFooterEn": "Thank you for shopping with us! Returns accepted within 7 days with receipt.",
+    "defaultReturnPolicyAr": "البضاعة المباعة ترد وتستبدل خلال 7 أيام بشرط سلامة المنتج ووجود أصل الفاتورة. (الأصناف الغذائية والاستهلاكية غير قابلة للاسترجاع)",
+    "defaultReturnPolicyEn": "Returns and exchanges accepted within 7 days with original invoice and item condition. (Consumables non-returnable)",
+    "enableSoundEffects": true,
+    "theme": "soft-glass-light",
+    "language": "ar",
+    "adminPin": "123456",
+    "customCategories": ["عام / General", "🍔 مأكولات وسناكس", "☕ مشروبات وقهوة", "🧼 مواد تنظيف وعناية", "📱 إلكترونيات وصيانة"]
+  },
+  "metadata": {
+    "lastUpdated": "2026-07-25T08:13:09.369Z",
+    "dbVersion": "1.0.0"
+  }
+}
